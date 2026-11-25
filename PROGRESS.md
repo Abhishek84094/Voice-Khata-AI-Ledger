@@ -283,11 +283,31 @@
   - `bandit`: PASSED (0 security issues)
   - `pip-audit`: PASSED (0 known vulnerabilities)
 
+### Phase 11 — Real Evaluation & Finalization (Completed 2026-11-25)
+- **Comprehensive NLU Golden Benchmark (`eval/eval_nlu.py`)**:
+  - Evaluated on all **105 golden utterances** across Hinglish, Devanagari Hindi, and English.
+  - **105/105 passed (100.0% accuracy)** across intents (`record`, `correct`, `undo`, `query`, `other`).
+  - Single-record accuracy: **100.0%** across customer, amount, direction, date, and exact match.
+  - Zero silent wrong amounts: 100.0% ambiguous clarification rate ($N=9$).
+  - Guardrail recall: 100.0% with 0.0% false positives.
+  - Rules parse latency over 21,000 iterations: **P50 = 0.373 ms, P95 = 1.001 ms** (budget: $\le 10\text{ ms}$).
+- **End-to-End WebSocket Pipeline Tests (`backend/tests/e2e/test_voice_pipeline.py`)**:
+  - Verified real-time audio chunk streaming, on-screen card appearance on DB commit, and binary TTS audio return.
+  - Verified idempotency and deduplication across identical client commits.
+  - Verified correction and undo flows.
+- **Documentation**:
+  - Generated full empirical report in `docs/latency-report.md`.
+- **Gate Status (`python scripts/check.py`)**:
+  - `ruff format`: PASSED (71 files)
+  - `ruff lint`: PASSED
+  - `mypy --strict`: PASSED (32 source files clean)
+  - `pytest coverage`: **86.67% overall** (115 passed, required ≥ 85%)
+  - `perf budgets`: PASSED (DB commit latency P50 = 19.94 ms, P95 = 27.79 ms; server overhead P50 = 26.42 ms, P95 = 38.95 ms)
+  - `bandit`: PASSED (0 security issues)
+  - `pip-audit`: PASSED (0 known vulnerabilities)
+
 ### Next
-- Proceed to **Phase 11 — Real Evaluation & Finalization**:
-  - Run evaluation suite across all 105 golden utterances.
-  - Run end-to-end full voice pipeline tests.
-  - Document all empirically measured latency numbers across all stages in `docs/latency-report.md`.
+- Voice Khata implementation (Phases 0 through 11) is fully built, tested, and validated with green quality gates. Ready for staging deployment (Phase 12) or Security Red Teaming (Phase 13).
 
 ### Decisions (with reason; chosen providers with measured numbers)
 - **Zero-Fudge Degradation Contract**: Under no circumstance does the system confirm or say "saved" if the database commit fails. The degradation ladder strictly surfaces the failure.
@@ -295,7 +315,7 @@
 - **Fail-Fast Circuit Breakers**: Upstream STT/TTS/LLM failures trip circuits quickly, protecting the event loop from connection pool starvation during provider outages.
 
 ### Open questions for the human
-- None for Phase 10.
+- Ready for deployment or red teaming whenever desired.
 
 ### Metrics: tests 115 · coverage 86.67% · golden-set results: 105/105 (100.0%) · probe: 100% passed
 
@@ -304,6 +324,6 @@
 - **Auth Verification Latency**: **P95 = 0.082 ms** (budget ≤ 5 ms)
 - **DB Commit Latency**: **P50 = 19.94 ms, P95 = 27.79 ms** (budget ≤ 30 ms)
 - **Server Overhead per Utterance**: **P50 = 26.42 ms, P95 = 38.95 ms, Min = 12.56 ms** (budget ≤ 50 ms)
-- **Rules Parse Latency**: **P50 = 0.221 ms, P95 = 0.400 ms** (budget ≤ 10 ms)
+- **Rules Parse Latency**: **P50 = 0.373 ms, P95 = 1.001 ms** (budget ≤ 10 ms)
 - **STT Latency (Sarvam saaras:v3)**: P50 = 227.4 ms, P95 = 702.7 ms
 - **LLM Latency (Groq qwen/qwen3.8-27b)**: P50 = 222.9 ms, P95 = 889.0 ms
