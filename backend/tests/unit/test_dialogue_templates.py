@@ -4,6 +4,8 @@ from app.dialogue.templates import (
     render_clarification_speech,
     render_confirmation_speech,
     render_correction_speech,
+    render_overpayment_question,
+    render_partial_payment_speech,
     render_saved_card_text,
     render_undo_speech,
 )
@@ -71,3 +73,69 @@ def test_clarification_speech_template() -> None:
         language="hi-IN",
     )
     assert "Ramesh" in text
+
+
+def test_partial_payment_speech_templates() -> None:
+    hi = render_partial_payment_speech(
+        customer_name="Ramesh",
+        paid_paise=80000,
+        remaining_paise=120000,
+        due_date_str="5 December",
+        language="hi-IN",
+    )
+    assert "800" in hi
+    assert "1200" in hi
+    assert "5 December" in hi
+
+    hi_no_date = render_partial_payment_speech(
+        customer_name="Ramesh",
+        paid_paise=80000,
+        remaining_paise=120000,
+        language="hi-IN",
+    )
+    assert "800" in hi_no_date
+    assert "1200" in hi_no_date
+
+    en = render_partial_payment_speech(
+        customer_name="Ramesh",
+        paid_paise=80000,
+        remaining_paise=120000,
+        due_date_str="December 5",
+        language="en-IN",
+    )
+    assert "800" in en
+    assert "1200" in en
+    assert "December 5" in en
+
+    en_no_date = render_partial_payment_speech(
+        customer_name="Ramesh",
+        paid_paise=80000,
+        remaining_paise=120000,
+        language="en-IN",
+    )
+    assert "800" in en_no_date
+    assert "1200" in en_no_date
+
+
+def test_overpayment_question_templates() -> None:
+    hi = render_overpayment_question(
+        customer_name="Mohan",
+        balance_paise=50000,
+        paid_paise=80000,
+        language="hi-IN",
+    )
+    assert "500" in hi
+    assert "800" in hi
+    assert "300" in hi
+    assert "advance" in hi
+
+    en = render_overpayment_question(
+        customer_name="Mohan",
+        balance_paise=50000,
+        paid_paise=80000,
+        language="en-IN",
+    )
+    assert "500" in en
+    assert "800" in en
+    assert "300" in en
+    assert "advance" in en

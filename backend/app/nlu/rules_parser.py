@@ -26,9 +26,17 @@ class ParsedEvent:
 
 
 @dataclass
+class ParsedPromise:
+    customer_name: str
+    amount_paise: int | None  # None = remainder / whole balance
+    due_date: date
+
+
+@dataclass
 class ParseResult:
     intent: Intent
     events: list[ParsedEvent] = field(default_factory=list)
+    promises: list[ParsedPromise] = field(default_factory=list)
     clarification_needed: str | None = None
     out_of_scope: bool = False
 
@@ -38,10 +46,12 @@ class ParseUtteranceResult:
     action: str  # "record", "undo", "correct", "query", "clarification_needed", "out_of_scope"
     intent: Intent
     events: list[ParsedEvent] = field(default_factory=list)
+    promises: list[ParsedPromise] = field(default_factory=list)
     customer_name: str | None = None
     question: str | None = None
     options: list[str] = field(default_factory=list)
     out_of_scope: bool = False
+    note: str | None = None
 
 
 CREDIT_KEYWORDS = [
@@ -137,6 +147,107 @@ def _is_query(text: str) -> bool:
     return any(re.search(p, lowered) for p in QUERY_PATTERNS)
 
 
+PRONOUN_WORDS = {
+    "isne",
+    "usne",
+    "wo",
+    "woh",
+    "voh",
+    "he",
+    "she",
+    "इसने",
+    "उसने",
+    "वो",
+    "वह",
+}
+
+PROMISE_KEYWORDS = [
+    "dega",
+    "degi",
+    "denge",
+    "lauta dega",
+    "lauta degi",
+    "lauta denge",
+    "wapas",
+    "baaki",
+    "baki",
+    "देगा",
+    "देगी",
+    "देंगे",
+    "लौटा देगा",
+    "लौटा देगी",
+    "लौटा देंगे",
+    "वापस",
+    "बाकी",
+]
+
+
+DATE_WORDS = {
+    "aaj",
+    "kal",
+    "parso",
+    "parson",
+    "last",
+    "today",
+    "tomorrow",
+    "yesterday",
+    "sunday",
+    "sun",
+    "monday",
+    "mon",
+    "tuesday",
+    "tue",
+    "wednesday",
+    "wed",
+    "thursday",
+    "thu",
+    "friday",
+    "fri",
+    "saturday",
+    "sat",
+    "somvar",
+    "somvaar",
+    "mangalvar",
+    "mangalvaar",
+    "budhvar",
+    "budhvaar",
+    "guruvar",
+    "guruvaar",
+    "shukravar",
+    "shukravaar",
+    "shanivar",
+    "shanivaar",
+    "ravivar",
+    "ravivaar",
+    "itvar",
+    "tareekh",
+    "tarikh",
+    "hafta",
+    "hafte",
+    "week",
+    "mahine",
+    "month",
+    "baaki",
+    "baki",
+    "आज",
+    "कल",
+    "परसों",
+    "आखिरी",
+    "सोमवार",
+    "मंगलवार",
+    "बुधवार",
+    "गुरुवार",
+    "शुक्रवार",
+    "शनिवार",
+    "रविवार",
+    "इतवार",
+    "तारीख",
+    "बाकी",
+    "हफ्ते",
+    "महीने",
+}
+
+
 def _has_keyword(text: str, keywords: list[str]) -> bool:
     lowered = text.lower()
     for k in keywords:
@@ -147,6 +258,12 @@ def _has_keyword(text: str, keywords: list[str]) -> bool:
 
 
 def _extract_customer_from_clause(clause: str) -> str | None:
+    # 0. Check pronouns: "isne abhi 800 diye", "wo kal dega", "usne 500 diye"
+    lowered_clause = clause.lower().strip()
+    words = lowered_clause.split()
+    if words and words[0] in PRONOUN_WORDS:
+        return "__PRONOUN__"
+
     # 1. Devanagari pattern: "रमेश का", "सुरेश ने", "गीता को"
     m_dev = re.search(
         r"(?:^|\s)(?P<name>[\u0900-\u097F]+(?:\s+जी)?)\s+(?:का|ने|को)(?:$|\s|[।,])",
@@ -154,29 +271,45 @@ def _extract_customer_from_clause(clause: str) -> str | None:
     )
     if m_dev:
         name = m_dev.group("name").strip()
-        if name not in ("आज", "कल", "परसों", "आखिरी"):
+        if name in PRONOUN_WORDS:
+            return "__PRONOUN__"
+        if name not in DATE_WORDS:
             return name
 
     # 2. Latin postposition pattern: "Ramesh ka", "Suresh ne", "Anita ji ne", "Geeta ko"
     m_lat = re.search(
-        r"(?:^|\s)(?P<name>[A-Z][A-Za-z]*(?:\s+ji)?)\s+(?:ka|ne|ko)\b",
+        r"(?:^|\s)(?P<name>[A-Za-z]+(?:\s+ji)?)\s+(?:ka|ne|ko)\b",
         clause,
+        re.IGNORECASE,
     )
     if m_lat:
         name = m_lat.group("name").strip()
-        if name.lower() not in ("aaj", "kal", "parso", "last", "aath", "barah", "paanch", "char"):
+        if name.lower() in PRONOUN_WORDS:
+            return "__PRONOUN__"
+        if name.lower() not in DATE_WORDS and name.lower() not in (
+            "aath",
+            "barah",
+            "paanch",
+            "char",
+            "sau",
+            "hazaar",
+        ):
             return name
 
     # 3. English prepositional patterns:
     # "Credit 340 to Ramesh", "Add 500 credit for Arun"
     m = re.search(r"\b(?:for|to)\s+(?P<name>[A-Z][A-Za-z]+)\b", clause)
     if m:
-        return m.group("name").strip()
+        name = m.group("name").strip()
+        if name.lower() not in DATE_WORDS:
+            return name
 
     # "Received 500 from Suresh"
     m = re.search(r"\bfrom\s+(?P<name>[A-Z][A-Za-z]+)\b", clause)
     if m:
-        return m.group("name").strip()
+        name = m.group("name").strip()
+        if name.lower() not in DATE_WORDS:
+            return name
 
     # English subject patterns: "Ramesh took ...", "Priya paid ...", "Meena gave ..."
     m = re.search(
@@ -185,7 +318,13 @@ def _extract_customer_from_clause(clause: str) -> str | None:
     )
     if m:
         name = m.group("name").strip()
-        if name.lower() not in ("add", "credit", "received", "yesterday", "today"):
+        if name.lower() not in DATE_WORDS and name.lower() not in (
+            "add",
+            "credit",
+            "received",
+            "yesterday",
+            "today",
+        ):
             return name
 
     # 4. Postposition at end: "dedh sau udhaar Geeta ko", "गीता को डेढ़ सौ उधार"
@@ -195,7 +334,7 @@ def _extract_customer_from_clause(clause: str) -> str | None:
     )
     if m_end:
         name = m_end.group("name").strip()
-        if name.lower() not in ("kal", "aaj", "parso", "कल", "आज"):
+        if name.lower() not in DATE_WORDS:
             return name
 
     return None
@@ -252,7 +391,10 @@ def _parse_single_clause(
     )
 
 
-def parse(text: str) -> ParseResult:
+def parse(
+    text: str,
+    session_context: dict[str, str | None] | None = None,
+) -> ParseResult:
     """Parse utterance into structured ParseResult with microsecond execution."""
     cleaned = _clean_text(text)
 
@@ -284,13 +426,19 @@ def parse(text: str) -> ParseResult:
     # Missing direction words check in single-clause utterances:
     has_credit = _has_keyword(cleaned, CREDIT_KEYWORDS)
     has_payment = _has_keyword(cleaned, PAYMENT_KEYWORDS)
-    if not has_credit and not has_payment and not ("," in cleaned or " aur " in cleaned):
+    has_promise = _has_keyword(cleaned, PROMISE_KEYWORDS)
+    if (
+        not has_credit
+        and not has_payment
+        and not has_promise
+        and not ("," in cleaned or " aur " in cleaned)
+    ):
         return ParseResult(
             intent=Intent.RECORD,
             clarification_needed="Missing direction: is this udhaar or payment?",
         )
 
-    # 6. Multi-event splitting (by comma or 'aur')
+    # 6. Multi-event and promise splitting (by comma or 'aur')
     clauses: list[str] = []
     if "," in cleaned:
         clauses = [c.strip() for c in cleaned.split(",") if c.strip()]
@@ -302,16 +450,84 @@ def parse(text: str) -> ParseResult:
         clauses = [cleaned]
 
     events: list[ParsedEvent] = []
+    promises: list[ParsedPromise] = []
+    notes: list[str] = []
     last_customer: str | None = None
 
     for c in clauses:
+        # Check if clause is a promise clause
+        is_prom_clause = _has_keyword(c, PROMISE_KEYWORDS)
         ev = _parse_single_clause(c, inherited_customer=last_customer)
         if ev is not None:
             events.append(ev)
             last_customer = ev.customer_name
+            # If the event itself also has a future promise word (e.g. single clause with promise)
+            if is_prom_clause:
+                p_date = resolve_date(c)
+                if p_date and p_date > date.today():
+                    promises.append(
+                        ParsedPromise(
+                            customer_name=ev.customer_name,
+                            amount_paise=ev.amount_paise,
+                            due_date=p_date,
+                        )
+                    )
+        elif is_prom_clause:
+            # Standalone promise clause e.g. "Sunday ko wapas dega", "baaki next week dega"
+            p_date = resolve_date(c)
+            cust = _extract_customer_from_clause(c) or last_customer
+            num_res = extract_number(c)
+            p_amt = num_res[0] if num_res else None
+            if p_date:
+                promises.append(
+                    ParsedPromise(
+                        customer_name=cust or "",
+                        amount_paise=p_amt,
+                        due_date=p_date,
+                    )
+                )
+        else:
+            # Explanatory note clause e.g. "salary late aayi", "bimaar thi isliye kam"
+            num_res = extract_number(c)
+            if (
+                num_res is None
+                and not _has_keyword(c, CREDIT_KEYWORDS)
+                and not _has_keyword(c, PAYMENT_KEYWORDS)
+            ):
+                notes.append(c.strip())
 
-    if events:
-        return ParseResult(intent=Intent.RECORD, events=events)
+    # Attach notes to events if any
+    if notes and events:
+        combined_note = "; ".join(notes)
+        for ev in events:
+            ev.note = combined_note
+
+    # Pronoun resolution
+    ctx_cust = (session_context or {}).get("current_customer_name")
+    for ev in events:
+        if ev.customer_name == "__PRONOUN__":
+            if ctx_cust:
+                ev.customer_name = ctx_cust
+            else:
+                return ParseResult(
+                    intent=Intent.RECORD,
+                    clarification_needed="Kis customer ne?",
+                )
+
+    for pr in promises:
+        if pr.customer_name == "__PRONOUN__" or not pr.customer_name:
+            if ctx_cust:
+                pr.customer_name = ctx_cust
+            elif events:
+                pr.customer_name = events[0].customer_name
+            else:
+                return ParseResult(
+                    intent=Intent.RECORD,
+                    clarification_needed="Kis customer ne?",
+                )
+
+    if events or promises:
+        return ParseResult(intent=Intent.RECORD, events=events, promises=promises)
 
     return ParseResult(
         intent=Intent.RECORD,
@@ -324,7 +540,7 @@ def parse_utterance(
     session_context: dict[str, str | None] | None = None,
 ) -> ParseUtteranceResult:
     """Session-aware wrapper around pure parse() mapping to pipeline actions (§4.3 item 4)."""
-    p = parse(text)
+    p = parse(text, session_context=session_context)
 
     if p.out_of_scope:
         return ParseUtteranceResult(
@@ -372,12 +588,17 @@ def parse_utterance(
             options=opts,
         )
 
-    if p.intent == Intent.RECORD and p.events:
-        c_name = p.events[0].customer_name
+    if p.intent == Intent.RECORD and (p.events or p.promises):
+        c_name = (
+            p.events[0].customer_name
+            if p.events
+            else (p.promises[0].customer_name if p.promises else None)
+        )
         return ParseUtteranceResult(
             action="record",
             intent=Intent.RECORD,
             events=p.events,
+            promises=p.promises,
             customer_name=c_name,
         )
 

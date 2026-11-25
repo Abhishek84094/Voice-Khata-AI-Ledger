@@ -9,6 +9,7 @@ from app.dialogue.session import SessionState, VoiceSession
 from app.dialogue.templates import (
     render_confirmation_speech,
     render_correction_speech,
+    render_partial_payment_speech,
     render_undo_speech,
 )
 from app.nlu.rules_parser import parse_utterance
@@ -361,6 +362,7 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                     t_commit0 = time.perf_counter()
                     saved_events_list: list[dict[str, Any]] = []
                     last_rec = None
+                    active_prom = None
 
                     async with session_factory() as db_sess:
                         ledger = LedgerService(db_sess, encryption_service=enc_service)
@@ -382,9 +384,61 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                                     "amount_paise": rec.amount_paise,
                                     "direction": rec.direction.value,
                                     "is_duplicate": rec.is_duplicate,
+                                    "note": evt.note,
                                 }
                             )
                             last_rec = rec
+
+                        # Record any associated promises
+                        target_cust_id: str | None = (
+                            last_rec.customer_id
+                            if last_rec
+                            else (
+                                (
+                                    await ledger.get_or_create_customer(
+                                        session.shop_id,
+                                        parse_res.customer_name or "Customer",
+                                    )
+                                )[0]
+                                if parse_res.customer_name
+                                else None
+                            )
+                        )
+                        if target_cust_id and parse_res.promises:
+                            for pr in parse_res.promises:
+                                prom_amt = pr.amount_paise
+                                if prom_amt is None and last_rec:
+                                    if last_rec.direction.value == "CREDIT_GIVEN":
+                                        prom_amt = last_rec.amount_paise
+                                    elif last_rec.new_balance_paise > 0:
+                                        prom_amt = last_rec.new_balance_paise
+                                await ledger.create_promise(
+                                    shop_id=session.shop_id,
+                                    customer_id=target_cust_id,
+                                    due_date=pr.due_date,
+                                    amount_paise=prom_amt,
+                                    source_event_id=last_rec.event_id if last_rec else None,
+                                )
+
+                        # If payment was received, check customer's active promises
+                        if (
+                            target_cust_id
+                            and last_rec
+                            and last_rec.direction.value == "PAYMENT_RECEIVED"
+                        ):
+                            proms = await ledger.get_customer_promises(
+                                session.shop_id, target_cust_id
+                            )
+                            active_prom = next(
+                                (
+                                    p
+                                    for p in proms
+                                    if p.status.value in ("PARTIALLY_KEPT", "OPEN")
+                                    and p.remaining_paise > 0
+                                ),
+                                None,
+                            )
+
                         await db_sess.commit()
 
                     commit_ms = (time.perf_counter() - t_commit0) * 1000.0
@@ -396,15 +450,20 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                     )
 
                     # Fast-path on-screen card: emit saved immediately (§4.3 item 7)
-                    await websocket.send_json(
-                        {
-                            "type": "saved",
-                            "events": saved_events_list,
-                            "customer_name": cust_name,
-                            "balance_paise": new_bal,
-                            "t_ms": round((time.perf_counter() - t0) * 1000.0, 2),
+                    card_payload: dict[str, Any] = {
+                        "type": "saved",
+                        "events": saved_events_list,
+                        "customer_name": cust_name,
+                        "balance_paise": new_bal,
+                        "t_ms": round((time.perf_counter() - t0) * 1000.0, 2),
+                    }
+                    if active_prom:
+                        card_payload["promise"] = {
+                            "status": active_prom.status.value,
+                            "remaining_paise": active_prom.remaining_paise,
+                            "due_date": active_prom.due_date.isoformat(),
                         }
-                    )
+                    await websocket.send_json(card_payload)
 
                     session.update_context(
                         customer_id=last_rec.customer_id if last_rec else None,
@@ -414,15 +473,29 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                         action="record",
                     )
 
-                    # Dynamic or cached TTS confirmation
-                    first_evt = parse_res.events[0]
-                    speech = render_confirmation_speech(
-                        cust_name,
-                        first_evt.amount_paise,
-                        first_evt.direction,
-                        new_bal,
-                        session.language,
-                    )
+                    # Dynamic or cached TTS confirmation (§5.10 item 7)
+                    if parse_res.events:
+                        first_evt = parse_res.events[0]
+                        if active_prom and first_evt.direction.value == "PAYMENT_RECEIVED":
+                            due_str = active_prom.due_date.strftime("%d %B")
+                            speech = render_partial_payment_speech(
+                                cust_name,
+                                first_evt.amount_paise,
+                                active_prom.remaining_paise,
+                                due_str,
+                                session.language,
+                            )
+                        else:
+                            speech = render_confirmation_speech(
+                                cust_name,
+                                first_evt.amount_paise,
+                                first_evt.direction,
+                                new_bal,
+                                session.language,
+                            )
+                    else:
+                        speech = f"{cust_name} ka hisaab save ho gaya."
+
                     t_tts0 = time.perf_counter()
                     await _run_tts(websocket, speech, session.language)
                     tts_first_ms = (time.perf_counter() - t_tts0) * 1000.0

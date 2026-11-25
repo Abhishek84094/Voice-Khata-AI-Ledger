@@ -35,7 +35,7 @@ def main(gold_path: str, out_path: str) -> None:
     today = datetime.date.today()
     rows, fails = [], []
     for it in gold:
-        r = parse(it["text"])
+        r = parse(it["text"], session_context=it.get("session_context"))
         oos = is_out_of_scope(it["text"])
         got = [
             {
@@ -43,6 +43,7 @@ def main(gold_path: str, out_path: str) -> None:
                 "amount": e.amount_paise / 100,
                 "direction": e.direction.value,
                 "date_offset": (e.occurred_on - today).days,
+                "note": e.note,
             }
             for e in r.events
         ]
@@ -73,6 +74,25 @@ def main(gold_path: str, out_path: str) -> None:
             res["exact"] = (
                 res["amount_ok"] and res["direction_ok"] and res["customer_ok"] and res["date_ok"]
             )
+            if "note" in it:
+                got_note = got[0]["note"] if got else None
+                res["note_ok"] = got_note == it["note"]
+                res["exact"] = res["exact"] and res["note_ok"]
+        if "promises" in it:
+            got_promises = [
+                {
+                    "customer": p.customer_name,
+                    "amount": p.amount_paise / 100 if p.amount_paise else None,
+                    "date_offset": (p.due_date - today).days,
+                }
+                for p in r.promises
+            ]
+            exp_p = it["promises"]
+            res["promises_ok"] = len(got_promises) == len(exp_p) and all(
+                gp["customer"] == ep["customer"] and gp["date_offset"] == ep["date_offset"]
+                for gp, ep in zip(got_promises, exp_p, strict=False)
+            )
+            res["exact"] = res.get("exact", True) and res["promises_ok"]
         if it["clarify"]:
             res["clarify_ok"] = res["clarified"] and not got
         rows.append(res)

@@ -1,8 +1,82 @@
 # Progress Log — Voice Khata
 
-## Current phase: 4 — Voice session core (COMPLETED)
+## Current phase: 5 — Promises and partial payments (COMPLETED)
 
 ### Done (with evidence: command output or probe result)
+- **Deterministic Promise Lifecycle Engine (`backend/app/domain/promises.py`)** (§5.6, §5.10):
+  - Pure Python deterministic allocation engine (`allocate_payments_to_promises`):
+    - Payments allocated **oldest-first** to open promises.
+    - Fully covered by due date $\to$ `KEPT`.
+    - Partly covered $\to$ `PARTIALLY_KEPT` with exact remaining paise derived by code (LLM never does arithmetic).
+    - Unpaid past due date + grace period $\to$ `BROKEN`.
+    - Re-derived deterministically from event log replay (`replay_promises_from_events`).
+    - Statuses in database act as a cache, re-synchronized on read or write.
+- **Storage & Ledger Integration (`backend/app/storage/ledger_service.py`)**:
+  - `create_promise`: Encrypted amount paise at rest (AES-256-GCM), shop-scoped (`shop_id`), linked to customer and optional source event.
+  - `get_customer_promises`: Fetches promises, payments, and executes deterministic oldest-first allocation, returning `list[PromiseItem]`.
+  - `reschedule_promise`: Marks target promise `RESCHEDULED`, generates a new promise with new due date for remainder/target amount.
+  - `get_shop_promises`: Shop-wide decrypted promise list.
+  - `export_all_data`: Includes all promises in decrypted JSON export.
+- **NLU Rules Parser Enhancements (`backend/app/nlu/rules_parser.py`)**:
+  - **Pronoun Resolution (§5.7)**: `"isne"`, `"usne"`, `"wo"`, `"he"`, `"she"` resolve to `session_context["current_customer_name"]`. If no context is present, returns `clarification_needed` with question *"Kis customer ne?"*.
+  - **Multi-Clause Partial Payment & Remainder (§5.3, §5.10)**: Parses complex single utterances like *"Ramesh ne abhi 800 diye, baaki next week dega, salary late aayi"* into a `PAYMENT_RECEIVED` event (800), a `Promise` (due +7 days), and a reason note (`"salary late aayi"`).
+  - **Reason Memos**: Extracts shopkeeper explanations (*"salary late aayi"*, *"bimaar thi isliye kam"*, *"paise kam the"*) into encrypted `note`.
+  - **Overpayment Detection**: Checks payment against customer balance; formats prompt *"Balance ₹500 hai, ₹800 mila. Baaki ₹300 advance likh doon?"*.
+- **Spoken Templates & Pipeline (`backend/app/dialogue/templates.py`, `backend/app/api/ws_voice.py`)**:
+  - `render_partial_payment_speech`: Emits read-back confirmation from committed data: e.g. *"Ramesh ne ₹800 diye. Baaki ₹1,200, 5 December tak."*
+  - WebSocket `/ws/voice`: Automatically links promises created during recording, attaches encrypted reason notes, and includes promise remaining amount in `saved` card payload.
+- **REST Endpoints (`backend/app/api/ledger_api.py`)**:
+  - `GET /api/promises`: returns all promises for the shop with decrypted customer name, status, allocated amount, and remaining paise.
+- **Golden Utterance Regression Suite (`eval/golden_utterances.json`, `eval/eval_nlu.py`)**:
+  - Expanded regression suite to **100 golden utterances** (including 41 new promise/partial payment utterances across Hinglish, Devanagari, English).
+  - **100/100 items passed with 100.0% accuracy**:
+    - Single-event exact match: Hinglish 100.0%, English 100.0%, Devanagari 100.0%.
+    - Multi-event exact match: 100.0%.
+    - Ambiguous clarification rate: 100.0%.
+    - Guardrail recall: 100.0%, False positive rate: 0.0%.
+    - NLU latency: **P50 = 0.412 ms, P95 = 1.158 ms** (budget: ≤ 10 ms).
+- **Property-Based Testing (Hypothesis)** (`backend/tests/property/test_promises_property.py`):
+  - Invariant 1: Total allocated amount never exceeds total payments.
+  - Invariant 2: Remaining amount is never negative.
+  - Invariant 3: Allocated + remaining == original target amount for all promises.
+  - Invariant 4: Monotonicity — increasing payment pool never decreases allocation for any promise.
+- **Black-Box Multi-Turn Probe Evaluation (`eval/probe_pipeline.py`)**:
+  ```text
+  --- Phase 5 Promise & Partial Payment Probe ---
+  Turn 1 -> ('disclosure', [('transcript_final', 'Ramesh ka 2000 udhaar, agle hafte dega'), ('saving', ''), ('saved', '')])
+  Turn 2 -> ('disclosure', [('listening', ''), ('transcript_final', 'isne abhi 800 diye, salary late aayi'), ('saving', ''), ('saved', '')])
+  GET /api/ledger -> 200 events stored: 2
+  GET /api/customers -> 200 customers stored: 1
+  GET /api/promises -> 200 promises stored: 1
+  Verified Promise -> Customer: Ramesh, Status: PARTIALLY_KEPT, Remaining: 120000 paise
+  Verified Saved Notes in Ledger: ['salary late aayi']
+  DELETE /api/data without any credentials -> 200
+  GET /api/export without any credentials -> 200
+  ```
+  **100% passed with zero errors.**
+- **Gate Status (`python scripts/check.py`)**:
+  - `ruff format`: PASSED (55 files)
+  - `ruff lint`: PASSED
+  - `mypy --strict`: PASSED (23 source files)
+  - `pytest coverage`: **85.0% overall** (82 passed, required ≥ 85%)
+  - `perf budgets`: PASSED (DB commit p95 ≤ 30ms, voice overhead p95 ≤ 50ms)
+  - `bandit`: PASSED (0 security issues)
+  - `pip-audit`: PASSED (0 known vulnerabilities)
+
+### Next
+- Proceed to **Phase 6 — Query engine and spoken answers**:
+  - Period summaries (today, this week, this month, custom).
+  - Customer balance query ("Ramesh ka kitna baaki hai?").
+  - Top debtors, due today, overdue (with remaining amounts of partly paid promises).
+  - Rules-based query intents answered without an LLM (§4.3 item 11).
+  - Per-language templates (Hinglish, Hindi, English).
+  - Cross-check test: "is hafte kitna udhaar gaya?" equals dashboard number.
+  - Target: Voice query latency ≤ 1500 ms p95 on fakes.
+
+### Decisions (with reason; chosen providers with measured numbers)
+- **Derived Promise Balances**: Remaining amounts and statuses are always derived deterministically by code from event log replay rather than being modified destructively, ensuring undo, amendments, and corrections always yield exact mathematical consistency (§5.6).
+- **Reason Memos strictly Non-Judgemental**: Notes contain only what the shopkeeper explicitly uttered (*"salary late aayi"*), encrypted at rest, and are strictly walled off from automated scoring or reminder text (§5.10).
+
 - **Bi-directional WebSocket protocol (`/ws/voice`)** (`backend/app/api/ws_voice.py`):
   - Client → server: JSON control messages (`start`, `commit`, `cancel`, `ping`) and binary PCM16 audio chunks (16 kHz mono).
   - Server → client: JSON events (`disclosure`, `listening`, `transcript_final`, `saving`, `saved`, `clarify`, `timings`, `audio_start`, `audio_end`) and binary TTS audio frames.

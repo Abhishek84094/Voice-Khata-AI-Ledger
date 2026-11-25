@@ -48,7 +48,23 @@ def main() -> int:
                 "--cov=app",
                 "--cov-report=term-missing",
                 "--cov-fail-under=85",
+                "--ignore=backend/tests/perf",
+                "-k",
+                "not test_commit_latency_benchmark",
                 "backend/tests",
+            ],
+        ),
+        (
+            "perf budgets",
+            [
+                py,
+                "-m",
+                "pytest",
+                "-q",
+                "backend/tests/perf",
+                "backend/tests/integration/test_ledger_service.py",
+                "-k",
+                "test_commit_latency_benchmark",
             ],
         ),
         (

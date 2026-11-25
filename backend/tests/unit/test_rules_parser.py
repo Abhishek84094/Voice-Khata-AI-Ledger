@@ -84,3 +84,52 @@ def test_multi_event() -> None:
     assert r.events[1].amount_paise == 20000
     assert r.events[1].direction == Direction.PAYMENT_RECEIVED
     assert r.events[1].occurred_on == date.today() - timedelta(days=1)
+
+
+def test_pronoun_resolution_with_context() -> None:
+    r = parse("isne abhi 800 diye", session_context={"current_customer_name": "Ramesh"})
+    assert r.intent == Intent.RECORD
+    assert len(r.events) == 1
+    assert r.events[0].customer_name == "Ramesh"
+    assert r.events[0].amount_paise == 80000
+    assert r.events[0].direction == Direction.PAYMENT_RECEIVED
+
+
+def test_pronoun_resolution_without_context() -> None:
+    r = parse("isne abhi 800 diye", session_context={})
+    assert r.clarification_needed == "Kis customer ne?"
+    assert len(r.events) == 0
+
+
+def test_partial_payment_with_promise_and_reason() -> None:
+    r = parse("Ramesh ne abhi 800 diye, baaki next week dega, salary late aayi")
+    assert r.intent == Intent.RECORD
+    assert len(r.events) == 1
+    assert r.events[0].customer_name == "Ramesh"
+    assert r.events[0].amount_paise == 80000
+    assert r.events[0].direction == Direction.PAYMENT_RECEIVED
+    assert r.events[0].note == "salary late aayi"
+    assert len(r.promises) == 1
+    assert r.promises[0].customer_name == "Ramesh"
+    assert r.promises[0].due_date == date.today() + timedelta(days=7)
+
+
+def test_reason_memo_note() -> None:
+    r = parse("Geeta ne 300 diye, bimaar thi isliye kam")
+    assert r.intent == Intent.RECORD
+    assert len(r.events) == 1
+    assert r.events[0].customer_name == "Geeta"
+    assert r.events[0].amount_paise == 30000
+    assert r.events[0].direction == Direction.PAYMENT_RECEIVED
+    assert r.events[0].note == "bimaar thi isliye kam"
+
+
+def test_credit_with_promise() -> None:
+    r = parse("Ramesh ka 500 udhaar, Sunday ko wapas dega")
+    assert r.intent == Intent.RECORD
+    assert len(r.events) == 1
+    assert r.events[0].customer_name == "Ramesh"
+    assert r.events[0].amount_paise == 50000
+    assert r.events[0].direction == Direction.CREDIT_GIVEN
+    assert len(r.promises) == 1
+    assert r.promises[0].customer_name == "Ramesh"

@@ -69,9 +69,39 @@ def run(client: TestClient, text: str) -> tuple[str, list[tuple[str, str]]]:
             return first["type"], [(m["type"], str(m.get("text", ""))[:60]) for m in msgs]
 
 
+def run_session(
+    client: TestClient, utterances: list[str]
+) -> list[tuple[str, list[tuple[str, str]]]]:
+    results = []
+    with patch("app.api.ws_voice._run_tts", AsyncMock()):
+        with client.websocket_connect("/ws/voice") as ws:
+            first = ws.receive_json()
+            for text in utterances:
+                with patch("app.voice.stt_client.GnaniSTTClient", lambda t=text, **kw: Cli(t)):
+                    ws.send_json({"type": "start", "language": "hi-IN"})
+                    ws.receive_json()
+                    ws.send_bytes(b"\x00" * 3200)
+                    ws.send_json({"type": "commit"})
+                    msgs = []
+                    for _ in range(5):
+                        try:
+                            m = ws.receive_json()
+                            msgs.append(m)
+                            if m["type"] in ("saved", "clarify", "cancelled"):
+                                break
+                        except Exception:
+                            break
+                    results.append(
+                        (first["type"], [(m["type"], str(m.get("text", ""))[:60]) for m in msgs])
+                    )
+    return results
+
+
 def main() -> None:
     app = create_app()
     with TestClient(app, raise_server_exceptions=False) as c:
+        # Start with clean slate for default shop
+        c.delete("/api/data")
         for t in [
             "Ramesh ka 340 udhaar",
             "Suresh ne 500 diye",
@@ -81,10 +111,43 @@ def main() -> None:
             "Ramesh ka 340 udhaar, kal 200 diya tha",
         ]:
             print(repr(t), "->", run(c, t))
+
+        # Phase 5 multi-turn probe:
+        # Speak full-amount promise, then "isne abhi 800 diye",
+        # check reduced balance, PARTIALLY_KEPT, saved note
+        print("\n--- Phase 5 Promise & Partial Payment Probe ---")
+        sess_results = run_session(
+            c,
+            [
+                "Ramesh ka 2000 udhaar, agle hafte dega",
+                "isne abhi 800 diye, salary late aayi",
+            ],
+        )
+        for idx, res in enumerate(sess_results):
+            print(f"Turn {idx + 1} ->", res)
+
         led = c.get("/api/ledger")
         cus = c.get("/api/customers")
+        proms = c.get("/api/promises")
+
         print("GET /api/ledger ->", led.status_code, "events stored:", len(led.json()))
         print("GET /api/customers ->", cus.status_code, "customers stored:", len(cus.json()))
+        print("GET /api/promises ->", proms.status_code, "promises stored:", len(proms.json()))
+        if proms.status_code == 200 and proms.json():
+            p_data = proms.json()[0]
+            print(
+                f"Verified Promise -> Customer: {p_data.get('customer_name')}, "
+                f"Status: {p_data.get('status')}, Remaining: {p_data.get('remaining_paise')} paise"
+            )
+            assert p_data.get("status") == "PARTIALLY_KEPT"
+            assert p_data.get("remaining_paise") == 120000  # ₹1200 remaining
+
+        # Verify saved note on payment
+        if led.status_code == 200 and led.json():
+            notes = [e.get("note") for e in led.json() if e.get("note")]
+            print("Verified Saved Notes in Ledger:", notes)
+            assert any("salary late aayi" in (n or "") for n in notes)
+
         print("DELETE /api/data without any credentials ->", c.delete("/api/data").status_code)
         print("GET /api/export without any credentials ->", c.get("/api/export").status_code)
 

@@ -24,3 +24,15 @@ def test_ledger_export_and_data_endpoints() -> None:
         data = exp_res.json()
         assert "customers" in data
         assert "events" in data
+
+        led_res = client.get("/api/ledger")
+        assert led_res.status_code == 200
+        assert isinstance(led_res.json(), list)
+
+        cus_res = client.get("/api/customers")
+        assert cus_res.status_code == 200
+        assert isinstance(cus_res.json(), list)
+
+        prom_res = client.get("/api/promises")
+        assert prom_res.status_code == 200
+        assert isinstance(prom_res.json(), list)

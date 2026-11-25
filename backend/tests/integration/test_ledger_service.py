@@ -260,3 +260,65 @@ async def test_commit_latency_benchmark(
             assert p95 <= 30.0
     finally:
         await bench_engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_promise_creation_and_allocation(
+    session: AsyncSession,
+    enc_service: EncryptionService,
+) -> None:
+    shop_id = str(uuid.uuid4())
+    shop = Shop(id=shop_id, name="Promise Kirana", language="hi-IN")
+    session.add(shop)
+    await session.commit()
+
+    service = LedgerService(session, encryption_service=enc_service)
+
+    # 1. Credit 2000 to Ramesh (200000 paise)
+    res_credit = await service.record_event(
+        shop_id=shop_id,
+        customer_name="Ramesh",
+        amount_paise=200000,
+        direction=Direction.CREDIT_GIVEN,
+        occurred_on=date.today(),
+        idempotency_key=str(uuid.uuid4()),
+    )
+    await session.commit()
+    cust_id = res_credit.customer_id
+
+    # 2. Create promise for Ramesh: 2000 due next week
+    due = date.today()
+    prom = await service.create_promise(
+        shop_id=shop_id,
+        customer_id=cust_id,
+        due_date=due,
+        amount_paise=200000,
+        source_event_id=res_credit.event_id,
+    )
+    await session.commit()
+    assert prom.id is not None
+
+    # Check promises before payment -> OPEN, remaining 200000
+    promises = await service.get_customer_promises(shop_id, cust_id)
+    assert len(promises) == 1
+    assert promises[0].status.value == "OPEN"
+    assert promises[0].remaining_paise == 200000
+
+    # 3. Partial payment of 800 (80000 paise) with note
+    await service.record_event(
+        shop_id=shop_id,
+        customer_name="Ramesh",
+        amount_paise=80000,
+        direction=Direction.PAYMENT_RECEIVED,
+        occurred_on=date.today(),
+        idempotency_key=str(uuid.uuid4()),
+        note="salary late aayi",
+    )
+    await session.commit()
+
+    # Derived promise status should now be PARTIALLY_KEPT, remaining 120000 paise
+    promises_after = await service.get_customer_promises(shop_id, cust_id)
+    assert len(promises_after) == 1
+    assert promises_after[0].status.value == "PARTIALLY_KEPT"
+    assert promises_after[0].allocated_paise == 80000
+    assert promises_after[0].remaining_paise == 120000

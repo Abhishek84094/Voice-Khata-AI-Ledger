@@ -740,5 +740,692 @@
   "events": [],
   "clarify": false,
   "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ne abhi 800 diye",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 800,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "isne abhi 500 diye",
+  "session_context": {
+   "current_customer_name": "Ramesh"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "isne abhi 800 diye",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "usne kal 300 diye",
+  "session_context": {
+   "current_customer_name": "Suresh"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Suresh",
+    "amount": 300,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": -1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ne 800 diye, baaki next week dega",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 800,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "Ramesh",
+    "date_offset": 7
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ne abhi 800 diye, baaki next week dega, salary late aayi",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 800,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "salary late aayi",
+  "promises": [
+   {
+    "customer": "Ramesh",
+    "date_offset": 7
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Geeta ne 300 diye, bimaar thi isliye kam",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Geeta",
+    "amount": 300,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "bimaar thi isliye kam",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Suresh ne 500 diye, paise kam the",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Suresh",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "paise kam the",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Sunil ne 400 diye, baaki kal dega",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Sunil",
+    "amount": 400,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "Sunil",
+    "date_offset": 1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Anita ji ne 600 diye, baaki parso dengi",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Anita ji",
+    "amount": 600,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "Anita ji",
+    "date_offset": 2
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Mohan ka 1000 udhaar, agle hafte dega",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Mohan",
+    "amount": 1000,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "Mohan",
+    "date_offset": 7
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Pooja ne 250 diye, salary late aayi",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Pooja",
+    "amount": 250,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "salary late aayi",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Manoj ne abhi 200 diye",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Manoj",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "isne 200 diye",
+  "session_context": {
+   "current_customer_name": "Manoj"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Manoj",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "usne 150 diya",
+  "session_context": {
+   "current_customer_name": "Geeta"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Geeta",
+    "amount": 150,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Kavita ne 450 diye, tabiyat kharab thi",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Kavita",
+    "amount": 450,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "tabiyat kharab thi",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Deepak ka 300 udhaar, kal dega",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Deepak",
+    "amount": 300,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "Deepak",
+    "date_offset": 1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ne 500 diye, agle hafte salary aayegi",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "agle hafte salary aayegi",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "isne 1000 diya",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "wo kal dega",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "रमेश ने अभी 800 दिए",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "रमेश",
+    "amount": 800,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "इसने अभी 500 दिए",
+  "session_context": {
+   "current_customer_name": "रमेश"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "रमेश",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "इसने अभी 800 दिए",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "रमेश ने 800 दिए, बाकी अगले हफ्ते देगा",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "रमेश",
+    "amount": 800,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "रमेश",
+    "date_offset": 7
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "गीता ने 300 दिए, बीमार थी इसलिए कम",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "गीता",
+    "amount": 300,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "बीमार थी इसलिए कम",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "सुरेश ने 500 दिए, पैसे कम थे",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "सुरेश",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "पैसे कम थे",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "सुनील ने 400 दिए, बाकी कल देगा",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "सुनील",
+    "amount": 400,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "सुनील",
+    "date_offset": 1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "अनिता जी ने 600 दिए, बाकी परसों देंगी",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "अनिता जी",
+    "amount": 600,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "अनिता जी",
+    "date_offset": 2
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "मोहन का 1000 उधार, अगले हफ्ते देगा",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "मोहन",
+    "amount": 1000,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "मोहन",
+    "date_offset": 7
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "पूजा ने 250 दिए, सैलरी लेट आई",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "पूजा",
+    "amount": 250,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "सैलरी लेट आई",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "दीपक का 300 उधार, कल देगा",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "दीपक",
+    "amount": 300,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "promises": [
+   {
+    "customer": "दीपक",
+    "date_offset": 1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "मनोज ने अभी 200 दिए",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "मनोज",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "इसने 200 दिए",
+  "session_context": {
+   "current_customer_name": "मनोज"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "मनोज",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "उसने कल 300 दिए",
+  "session_context": {
+   "current_customer_name": "सुरेश"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "सुरेश",
+    "amount": 300,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": -1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "उसने 150 दिया",
+  "session_context": {
+   "current_customer_name": "गीता"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "गीता",
+    "amount": 150,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "कविता ने 450 दिए, तबीयत खराब थी",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "कविता",
+    "amount": 450,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "तबीयत खराब थी",
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Ramesh paid 800 now",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 800,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "He paid 500",
+  "session_context": {
+   "current_customer_name": "Ramesh"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "She paid 300",
+  "session_context": {
+   "current_customer_name": "Priya"
+  },
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Priya",
+    "amount": 300,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "He paid 500",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Ramesh paid 800, salary late aayi",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 800,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "note": "salary late aayi",
+  "clarify": false,
+  "out_of_scope": false
  }
 ]

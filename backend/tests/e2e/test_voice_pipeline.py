@@ -38,6 +38,9 @@ def test_full_voice_pipeline_credit_and_rest_visibility(monkeypatch: pytest.Monk
     monkeypatch.setattr(
         "app.voice.stt_client.GnaniSTTClient", lambda **kw: FakeSTTClient(transcript)
     )
+    monkeypatch.setattr(
+        "app.voice.stt_client.GnaniSTTClient", lambda **kw: FakeSTTClient(transcript)
+    )
 
     app = create_app()
     with TestClient(app) as client:
@@ -113,6 +116,9 @@ def test_full_voice_pipeline_credit_and_rest_visibility(monkeypatch: pytest.Monk
 def test_voice_duplicate_commit_does_not_double_post(monkeypatch: pytest.MonkeyPatch) -> None:
     transcript = "Ramesh ka 340 udhaar"
     monkeypatch.setattr("app.api.ws_voice.GnaniSTTClient", lambda **kw: FakeSTTClient(transcript))
+    monkeypatch.setattr(
+        "app.voice.stt_client.GnaniSTTClient", lambda **kw: FakeSTTClient(transcript)
+    )
     monkeypatch.setattr(
         "app.voice.stt_client.GnaniSTTClient", lambda **kw: FakeSTTClient(transcript)
     )

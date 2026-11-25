@@ -74,3 +74,46 @@ def render_clarification_speech(
 ) -> str:
     """Read back question requiring human clarification."""
     return question
+
+
+def render_partial_payment_speech(
+    customer_name: str,
+    paid_paise: int,
+    remaining_paise: int,
+    due_date_str: str | None = None,
+    language: str = "hi-IN",
+) -> str:
+    """Read back after partial payment commit (§5.10 item 7).
+
+    e.g. 'Ramesh ne ₹800 diye. Baaki ₹1,200, 5 December tak.'
+    """
+    paid_num = paid_paise // 100
+    rem_num = remaining_paise // 100
+    if language.startswith("en"):
+        if due_date_str:
+            return f"{customer_name} paid ₹{paid_num}. Remaining ₹{rem_num}, due by {due_date_str}."
+        return f"{customer_name} paid ₹{paid_num}. Remaining balance is ₹{rem_num}."
+
+    if due_date_str:
+        return f"{customer_name} ne ₹{paid_num} diye. Baaki ₹{rem_num}, {due_date_str} tak."
+    return f"{customer_name} ne ₹{paid_num} diye. Baaki balance ₹{rem_num} hai."
+
+
+def render_overpayment_question(
+    customer_name: str,
+    balance_paise: int,
+    paid_paise: int,
+    language: str = "hi-IN",
+) -> str:
+    """Prompt for overpayment confirmation (§5.10 item 6).
+
+    e.g. 'Balance ₹500 hai, ₹800 mila. Baaki ₹300 advance likh doon?'
+    """
+    bal_num = balance_paise // 100
+    paid_num = paid_paise // 100
+    adv_num = paid_num - bal_num
+    if language.startswith("en"):
+        return (
+            f"Balance is ₹{bal_num}, received ₹{paid_num}. Record remaining ₹{adv_num} as advance?"
+        )
+    return f"Balance ₹{bal_num} hai, ₹{paid_num} mila. Baaki ₹{adv_num} advance likh doon?"

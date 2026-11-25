@@ -94,6 +94,16 @@ async def get_customers(
     return items
 
 
+@router.get("/promises")
+async def get_promises(
+    session: AsyncSession = Depends(get_session),
+    enc_service: EncryptionService = Depends(get_encryption_service),
+) -> list[dict[str, Any]]:
+    """Return all promises with derived allocations and statuses (§5.6, §6 Phase 5)."""
+    service = LedgerService(session, encryption_service=enc_service)
+    return await service.get_shop_promises(DEFAULT_SHOP_ID)
+
+
 @router.get("/export")
 async def export_data(
     session: AsyncSession = Depends(get_session),

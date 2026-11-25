@@ -103,8 +103,20 @@ def resolve_date(text: str, reference_date: date | None = None) -> date | None:
     lowered = text.lower()
 
     # Aaj / today
-    if any(k in lowered for k in ("aaj", "आज", "today", "abhi")):
+    if any(k in lowered for k in ("aaj", "आज", "today", "abhi", "अभी")):
         return ref
+
+    # Next week / agle hafte
+    if any(
+        k in lowered for k in ("next week", "agle hafte", "agle saptah", "अगले हफ्ते", "अगले सप्ताह")
+    ):
+        return ref + timedelta(days=7)
+
+    # Month end
+    if any(k in lowered for k in ("month end", "mahine ke end", "mahine ke aakhri", "महीने के अंत")):
+        next_m = ref.month % 12 + 1
+        next_y = ref.year if next_m > 1 else ref.year + 1
+        return date(next_y, next_m, 1) - timedelta(days=1)
 
     # Parso / parson
     if any(k in lowered for k in ("parso", "परसों", "परसो", "parson")):
