@@ -1,0 +1,744 @@
+[
+ {
+  "group": "hinglish",
+  "text": "Ramesh ka 340 udhaar",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ka teen sau chaalis udhaar",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Suresh ne 500 diye",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Suresh",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ka saadhe teen sau likh do",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 350,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "dedh sau udhaar Geeta ko",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Geeta",
+    "amount": 150,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Mohan ne do sau paanch diya",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Mohan",
+    "amount": 205,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Anita ka dhai sau baaki",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Anita",
+    "amount": 250,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Kiran ne sawa sau jama kiya",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Kiran",
+    "amount": 125,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Vijay ka paune do sau udhaar",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Vijay",
+    "amount": 175,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Lakshmi ka do hazaar udhaar",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Lakshmi",
+    "amount": 2000,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ka 1,200 udhaar",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 1200,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ka ₹450 baaki",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 450,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Sunita ne 75 rupaye diye",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Sunita",
+    "amount": 75,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Rahul ka teen sau forty udhaar",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Rahul",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Ramesh ka 340 udhaar aaj",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Suresh ne kal 200 diya tha",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Suresh",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": -1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Mohan ka parso 150 udhaar tha",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Mohan",
+    "amount": 150,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": -2
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Geeta ne aaj 100 diye",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Geeta",
+    "amount": 100,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Pooja ka chaar sau pachaas udhaar",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Pooja",
+    "amount": 450,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "hinglish",
+  "text": "Naveen ne paanch sau jama kiye",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Naveen",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Ramesh took 340 on credit",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Priya paid 200",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Priya",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Add 500 credit for Arun",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Arun",
+    "amount": 500,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Arun paid three hundred",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Arun",
+    "amount": 300,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Deepak three hundred fifty on credit",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Deepak",
+    "amount": 350,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "english",
+  "text": "Meena gave 120 yesterday",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Meena",
+    "amount": 120,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": -1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "ambiguous",
+  "text": "Ramesh ko 200 diya",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "ambiguous",
+  "text": "Ramesh ka 300",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "ambiguous",
+  "text": "Suresh 400",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "ambiguous",
+  "text": "Geeta ka 150",
+  "intent": "record",
+  "events": [],
+  "clarify": true,
+  "out_of_scope": false
+ },
+ {
+  "group": "multi_event",
+  "text": "Ramesh ka 340 udhaar, kal 200 diya tha",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Ramesh",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   },
+   {
+    "customer": "Ramesh",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": -1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "multi_event",
+  "text": "Geeta ka 100 udhaar aur Sita ne 50 diye",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Geeta",
+    "amount": 100,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   },
+   {
+    "customer": "Sita",
+    "amount": 50,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "multi_event",
+  "text": "Anil ka 100 udhaar, parso 50 jama tha",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "Anil",
+    "amount": 100,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   },
+   {
+    "customer": "Anil",
+    "amount": 50,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": -2
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "correction",
+  "text": "nahi 430",
+  "intent": "correct",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "correction",
+  "text": "nahi, 430 hai",
+  "intent": "correct",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "correction",
+  "text": "sorry 430",
+  "intent": "correct",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "correction",
+  "text": "no I meant 430",
+  "intent": "correct",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "correction",
+  "text": "galat tha, 500 hai",
+  "intent": "correct",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "undo",
+  "text": "last entry hata do",
+  "intent": "undo",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "undo",
+  "text": "undo",
+  "intent": "undo",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "undo",
+  "text": "cancel kar do",
+  "intent": "undo",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "Ramesh ka total?",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "aaj kitna udhaar gaya",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "kitna baaki hai Ramesh ka",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "hisab batao",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "out_of_scope",
+  "text": "mujhe loan chahiye",
+  "intent": "other",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": true
+ },
+ {
+  "group": "out_of_scope",
+  "text": "Ramesh ka interest kitna hua",
+  "intent": "other",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": true
+ },
+ {
+  "group": "out_of_scope",
+  "text": "mera CIBIL score batao",
+  "intent": "other",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": true
+ },
+ {
+  "group": "out_of_scope",
+  "text": "doctor ko kitna dena hai",
+  "intent": "other",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": true
+ },
+ {
+  "group": "devanagari",
+  "text": "रमेश का 340 उधार",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "रमेश",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "सुरेश ने 500 दिए",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "सुरेश",
+    "amount": 500,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "रमेश का तीन सौ चालीस उधार",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "रमेश",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "गीता को डेढ़ सौ उधार",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "गीता",
+    "amount": 150,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "मोहन ने कल 200 दिया था",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "मोहन",
+    "amount": 200,
+    "direction": "PAYMENT_RECEIVED",
+    "date_offset": -1
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "अनीता का ढाई सौ बाकी",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "अनीता",
+    "amount": 250,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "रमेश का ३४० उधार",
+  "intent": "record",
+  "events": [
+   {
+    "customer": "रमेश",
+    "amount": 340,
+    "direction": "CREDIT_GIVEN",
+    "date_offset": 0
+   }
+  ],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "रमेश का कुल कितना",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "आखिरी एंट्री हटा दो",
+  "intent": "undo",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "devanagari",
+  "text": "नहीं, 430",
+  "intent": "correct",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ }
+]

@@ -1,0 +1,40 @@
+# Environment and secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+
+# OS and IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Database and local data
+*.db
+*.sqlite3
+pgdata/
