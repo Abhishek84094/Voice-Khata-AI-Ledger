@@ -1,5 +1,5 @@
 {
- "n_total": 100,
+ "n_total": 105,
  "intent_accuracy": 100.0,
  "intent_accuracy_by_intent": {
   "record": {
@@ -15,7 +15,7 @@
    "acc": 100.0
   },
   "query": {
-   "n": 5,
+   "n": 10,
    "acc": 100.0
   },
   "other": {
@@ -69,12 +69,12 @@
   "recall": 100.0,
   "n_pos": 4,
   "false_positive_rate": 0.0,
-  "n_neg": 96
+  "n_neg": 101
  },
  "failures": [],
  "nlu_latency_ms": {
-  "n": 20000,
-  "p50": 0.412,
-  "p95": 1.158
+  "n": 21000,
+  "p50": 0.221,
+  "p95": 0.4
  }
 }

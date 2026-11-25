@@ -117,3 +117,104 @@ def render_overpayment_question(
             f"Balance is ₹{bal_num}, received ₹{paid_num}. Record remaining ₹{adv_num} as advance?"
         )
     return f"Balance ₹{bal_num} hai, ₹{paid_num} mila. Baaki ₹{adv_num} advance likh doon?"
+
+
+def render_customer_balance_speech(
+    customer_name: str,
+    balance_paise: int,
+    language: str = "hi-IN",
+) -> str:
+    """Spoken answer for a customer's outstanding balance or advance (§4.3 item 11)."""
+    bal_num = balance_paise // 100
+    if balance_paise > 0:
+        if language.startswith("en"):
+            return f"{customer_name} owes ₹{bal_num}."
+        return f"{customer_name} ka ₹{bal_num} baaki hai."
+    elif balance_paise < 0:
+        adv_num = abs(bal_num)
+        if language.startswith("en"):
+            return f"{customer_name} has ₹{adv_num} advance."
+        return f"{customer_name} ka ₹{adv_num} advance jama hai."
+    else:
+        if language.startswith("en"):
+            return f"{customer_name}'s account is settled."
+        return f"{customer_name} ka hisaab barabar hai, koi baaki nahi."
+
+
+def render_period_summary_speech(
+    summary: Any,
+    language: str = "hi-IN",
+) -> str:
+    """Spoken period summary (today, this week, this month)."""
+    cr_num = summary.credit_paise // 100
+    pay_num = summary.payment_paise // 100
+    p = summary.period
+
+    if language.startswith("en"):
+        period_str = (
+            "Today" if p == "today" else ("This week" if p == "this_week" else "This month")
+        )
+        return (
+            f"{period_str}, total credit given is ₹{cr_num}, and payments received are ₹{pay_num}."
+        )
+
+    period_str = "Aaj" if p == "today" else ("Is hafte" if p == "this_week" else "Is mahine")
+    return f"{period_str} kul ₹{cr_num} ka udhaar gaya, aur ₹{pay_num} jama hue."
+
+
+def render_top_debtors_speech(
+    debtors: list[Any],
+    language: str = "hi-IN",
+) -> str:
+    """Spoken answer listing customers with highest outstanding balances."""
+    if not debtors:
+        if language.startswith("en"):
+            return "No customers have outstanding credit."
+        return "Kisi customer ka udhaar baaki nahi hai."
+
+    items_str = []
+    for d in debtors[:3]:
+        amt = d.balance_paise // 100
+        items_str.append(f"{d.customer_name} (₹{amt})")
+
+    joined = " aur ".join(items_str) if len(items_str) > 1 else items_str[0]
+    if language.startswith("en"):
+        joined_en = " and ".join(items_str) if len(items_str) > 1 else items_str[0]
+        return f"Top debtors are {joined_en}."
+    return f"Sabse zyada udhaar {joined} ka hai."
+
+
+def render_due_today_speech(
+    dues: list[Any],
+    language: str = "hi-IN",
+) -> str:
+    """Spoken answer for promises due today."""
+    if not dues:
+        if language.startswith("en"):
+            return "No payments are due today."
+        return "Aaj kisi ka payment due nahi hai."
+
+    items_str = [f"{d.customer_name} ka ₹{d.remaining_paise // 100}" for d in dues[:3]]
+    joined = " aur ".join(items_str)
+    if language.startswith("en"):
+        items_en = [f"{d.customer_name} (₹{d.remaining_paise // 100})" for d in dues[:3]]
+        return f"Payments due today: {', '.join(items_en)}."
+    return f"Aaj {joined} ka payment due hai."
+
+
+def render_overdue_speech(
+    overdues: list[Any],
+    language: str = "hi-IN",
+) -> str:
+    """Spoken answer for overdue promises."""
+    if not overdues:
+        if language.startswith("en"):
+            return "No overdue payments."
+        return "Koi overdue payment nahi hai."
+
+    items_str = [f"{d.customer_name} ka ₹{d.remaining_paise // 100}" for d in overdues[:3]]
+    joined = " aur ".join(items_str)
+    if language.startswith("en"):
+        items_en = [f"{d.customer_name} (₹{d.remaining_paise // 100})" for d in overdues[:3]]
+        return f"Overdue payments: {', '.join(items_en)}."
+    return f"{joined} overdue hai."

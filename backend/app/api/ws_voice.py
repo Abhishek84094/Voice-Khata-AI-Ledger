@@ -2,6 +2,7 @@
 
 import time
 import uuid
+from datetime import date
 from typing import Any
 
 from app.api.ledger_api import DEFAULT_SHOP_ID
@@ -9,13 +10,20 @@ from app.dialogue.session import SessionState, VoiceSession
 from app.dialogue.templates import (
     render_confirmation_speech,
     render_correction_speech,
+    render_customer_balance_speech,
+    render_due_today_speech,
+    render_overdue_speech,
     render_partial_payment_speech,
+    render_period_summary_speech,
+    render_top_debtors_speech,
     render_undo_speech,
 )
+from app.domain.queries import QueryType, parse_query
 from app.nlu.rules_parser import parse_utterance
 from app.storage.db import get_session_factory
 from app.storage.encryption import EncryptionService
 from app.storage.ledger_service import LedgerService
+from app.storage.query_service import QueryService
 from app.voice import stt_client
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -304,40 +312,107 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                     )
 
                 elif action == "query":
-                    cust_name = parse_res.customer_name or session.current_customer_name
-                    if cust_name:
-                        async with session_factory() as db_sess:
-                            ledger = LedgerService(db_sess, encryption_service=enc_service)
-                            cust_id, _ = await ledger.get_or_create_customer(
-                                session.shop_id, cust_name
+                    parsed_q = parse_query(transcript)
+                    ans = ""
+                    card_extra: dict[str, Any] = {"query_type": parsed_q.query_type.value}
+
+                    async with session_factory() as db_sess:
+                        qs = QueryService(db_sess, encryption_service=enc_service)
+                        ledger = LedgerService(db_sess, encryption_service=enc_service)
+
+                        if parsed_q.query_type == QueryType.CUSTOMER_BALANCE:
+                            cust_name = (
+                                parsed_q.customer_name
+                                or parse_res.customer_name
+                                or session.current_customer_name
                             )
-                            bal = await ledger.get_cached_balance(session.shop_id, cust_id)
-                            bal_num = bal // 100
-                            ans = f"{cust_name} ka balance {bal_num} rupaye hai."
-                            await websocket.send_json(
-                                {
-                                    "type": "saved",
-                                    "query_answer": ans,
-                                    "customer_name": cust_name,
-                                    "balance_paise": bal,
-                                    "t_ms": round((time.perf_counter() - t0) * 1000.0, 2),
-                                }
+                            if cust_name:
+                                cust_id, _ = await ledger.get_or_create_customer(
+                                    session.shop_id, cust_name
+                                )
+                                bal = await ledger.get_cached_balance(session.shop_id, cust_id)
+                                ans = render_customer_balance_speech(
+                                    cust_name, bal, session.language
+                                )
+                                card_extra["customer_name"] = cust_name
+                                card_extra["balance_paise"] = bal
+                            else:
+                                ans = "Kiska balance dekhna hai?"
+
+                        elif parsed_q.query_type == QueryType.PERIOD_SUMMARY:
+                            today = date.today()
+                            start_d = parsed_q.start_date or today
+                            end_d = parsed_q.end_date or today
+                            summary = await qs.get_period_summary(
+                                session.shop_id, start_d, end_d, period=parsed_q.period
                             )
-                            t_tts0 = time.perf_counter()
-                            await _run_tts(websocket, ans, session.language)
-                            tts_first_ms = (time.perf_counter() - t_tts0) * 1000.0
-                    else:
-                        ans = "Kiska balance dekhna hai?"
-                        await websocket.send_json(
-                            {
-                                "type": "clarify",
-                                "question": ans,
-                                "t_ms": round((time.perf_counter() - t0) * 1000.0, 2),
+                            ans = render_period_summary_speech(summary, session.language)
+                            card_extra["summary"] = {
+                                "credit_paise": summary.credit_paise,
+                                "payment_paise": summary.payment_paise,
+                                "period": summary.period,
                             }
-                        )
-                        t_tts0 = time.perf_counter()
-                        await _run_tts(websocket, ans, session.language)
-                        tts_first_ms = (time.perf_counter() - t_tts0) * 1000.0
+
+                        elif parsed_q.query_type == QueryType.TOP_DEBTORS:
+                            debtors = await qs.get_top_debtors(
+                                session.shop_id, limit=parsed_q.limit
+                            )
+                            ans = render_top_debtors_speech(debtors, session.language)
+                            card_extra["debtors"] = [
+                                {
+                                    "customer_name": d.customer_name,
+                                    "balance_paise": d.balance_paise,
+                                }
+                                for d in debtors
+                            ]
+
+                        elif parsed_q.query_type == QueryType.DUE_TODAY:
+                            dues = await qs.get_due_promises(session.shop_id)
+                            ans = render_due_today_speech(dues, session.language)
+                            card_extra["dues"] = [
+                                {
+                                    "customer_name": d.customer_name,
+                                    "remaining_paise": d.remaining_paise,
+                                }
+                                for d in dues
+                            ]
+
+                        elif parsed_q.query_type == QueryType.OVERDUE:
+                            overdues = await qs.get_overdue_promises(session.shop_id)
+                            ans = render_overdue_speech(overdues, session.language)
+                            card_extra["overdues"] = [
+                                {
+                                    "customer_name": d.customer_name,
+                                    "remaining_paise": d.remaining_paise,
+                                }
+                                for d in overdues
+                            ]
+
+                        elif parsed_q.query_type == QueryType.LAST_ENTRIES:
+                            recent = await qs.get_recent_entries(
+                                session.shop_id, limit=parsed_q.limit
+                            )
+                            ans = f"Aakhiri {len(recent)} entries ka hisaab."
+                            card_extra["recent"] = [
+                                {
+                                    "customer_name": r.customer_name,
+                                    "amount_paise": r.amount_paise,
+                                    "direction": r.direction,
+                                }
+                                for r in recent
+                            ]
+
+                    await websocket.send_json(
+                        {
+                            "type": "saved",
+                            "query_answer": ans,
+                            **card_extra,
+                            "t_ms": round((time.perf_counter() - t0) * 1000.0, 2),
+                        }
+                    )
+                    t_tts0 = time.perf_counter()
+                    await _run_tts(websocket, ans, session.language)
+                    tts_first_ms = (time.perf_counter() - t_tts0) * 1000.0
 
                     server_total_ms = (time.perf_counter() - t0) * 1000.0
                     await websocket.send_json(

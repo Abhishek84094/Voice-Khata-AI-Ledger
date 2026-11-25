@@ -148,6 +148,31 @@ def main() -> None:
             print("Verified Saved Notes in Ledger:", notes)
             assert any("salary late aayi" in (n or "") for n in notes)
 
+        # Phase 6 query probe:
+        # Ask spoken queries via voice and verify answers match report endpoints
+        print("\n--- Phase 6 Query Engine Probe ---")
+        q_results = run_session(
+            c,
+            [
+                "Ramesh ka total?",
+                "is hafte kitna udhaar gaya?",
+            ],
+        )
+        for idx, res in enumerate(q_results):
+            print(f"Query Turn {idx + 1} ->", res)
+
+        rep_summary = c.get("/api/reports/summary?period=this_week")
+        print(
+            "GET /api/reports/summary?period=this_week ->",
+            rep_summary.status_code,
+            rep_summary.json(),
+        )
+        assert rep_summary.status_code == 200
+
+        rep_debtors = c.get("/api/reports/top-debtors")
+        print("GET /api/reports/top-debtors ->", rep_debtors.status_code, rep_debtors.json())
+        assert rep_debtors.status_code == 200
+
         print("DELETE /api/data without any credentials ->", c.delete("/api/data").status_code)
         print("GET /api/export without any credentials ->", c.get("/api/export").status_code)
 

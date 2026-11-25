@@ -1427,5 +1427,45 @@
   "note": "salary late aayi",
   "clarify": false,
   "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "is hafte kitna udhaar gaya",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "is mahine kitna paisa aaya",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "sabse zyada udhaar kiska hai",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "aaj kiska payment aana hai",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
+ },
+ {
+  "group": "query",
+  "text": "kiska payment overdue hai",
+  "intent": "query",
+  "events": [],
+  "clarify": false,
+  "out_of_scope": false
  }
 ]

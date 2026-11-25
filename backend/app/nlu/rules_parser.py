@@ -118,10 +118,18 @@ QUERY_PATTERNS = [
     r"\bkitna\s*udhaar\b",
     r"\bkitna\s*baaki\b",
     r"\bkitna\s*dena\b",
+    r"\bkitna\s*paisa\b",
+    r"\bkitna\s*aaya\b",
+    r"\bkitna\s*gaya\b",
     r"\bhisab\s*batao\b",
+    r"\bkiska\b",
+    r"\bsabse\s*zyada\b",
+    r"\boverdue\b",
     r"कुल\s*कितना",
     r"कितना\s*बाकी",
     r"कितना\s*उधार",
+    r"किसका",
+    r"सबसे\s*ज्यादा",
 ]
 
 

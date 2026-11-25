@@ -6,7 +6,8 @@ from app.storage.db import get_db_session as get_session
 from app.storage.encryption import EncryptionService
 from app.storage.ledger_service import LedgerService
 from app.storage.models import Customer, LedgerEvent
-from fastapi import APIRouter, Depends
+from app.storage.query_service import QueryService
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -102,6 +103,107 @@ async def get_promises(
     """Return all promises with derived allocations and statuses (§5.6, §6 Phase 5)."""
     service = LedgerService(session, encryption_service=enc_service)
     return await service.get_shop_promises(DEFAULT_SHOP_ID)
+
+
+@router.get("/reports/summary")
+async def get_report_summary(
+    period: str = Query("today"),
+    session: AsyncSession = Depends(get_session),
+    enc_service: EncryptionService = Depends(get_encryption_service),
+) -> dict[str, Any]:
+    """Period summary endpoint for dashboard and cross-checking (§6 Phase 6)."""
+    from datetime import date, timedelta
+
+    today = date.today()
+    start_d = today
+    end_d = today
+
+    if period == "this_week":
+        start_d = today - timedelta(days=today.weekday())
+        end_d = start_d + timedelta(days=6)
+    elif period == "this_month":
+        start_d = date(today.year, today.month, 1)
+        next_m = today.month % 12 + 1
+        next_y = today.year if next_m > 1 else today.year + 1
+        end_d = date(next_y, next_m, 1) - timedelta(days=1)
+
+    qs = QueryService(session, encryption_service=enc_service)
+    summary = await qs.get_period_summary(DEFAULT_SHOP_ID, start_d, end_d, period=period)
+    return {
+        "period": period,
+        "start_date": start_d.isoformat(),
+        "end_date": end_d.isoformat(),
+        "credit_paise": summary.credit_paise,
+        "payment_paise": summary.payment_paise,
+        "net_paise": summary.net_paise,
+        "credit_rupees": summary.credit_paise / 100.0,
+        "payment_rupees": summary.payment_paise / 100.0,
+        "net_rupees": summary.net_paise / 100.0,
+    }
+
+
+@router.get("/reports/top-debtors")
+async def get_top_debtors(
+    limit: int = Query(5, ge=1, le=50),
+    session: AsyncSession = Depends(get_session),
+    enc_service: EncryptionService = Depends(get_encryption_service),
+) -> list[dict[str, Any]]:
+    """Top debtors endpoint for dashboard and voice cross-checking (§6 Phase 6)."""
+    qs = QueryService(session, encryption_service=enc_service)
+    debtors = await qs.get_top_debtors(DEFAULT_SHOP_ID, limit=limit)
+    return [
+        {
+            "customer_id": d.customer_id,
+            "customer_name": d.customer_name,
+            "balance_paise": d.balance_paise,
+            "balance_rupees": d.balance_paise / 100.0,
+        }
+        for d in debtors
+    ]
+
+
+@router.get("/reports/due-today")
+async def get_due_today(
+    session: AsyncSession = Depends(get_session),
+    enc_service: EncryptionService = Depends(get_encryption_service),
+) -> list[dict[str, Any]]:
+    """Promises due today (§6 Phase 6)."""
+    qs = QueryService(session, encryption_service=enc_service)
+    dues = await qs.get_due_promises(DEFAULT_SHOP_ID)
+    return [
+        {
+            "promise_id": d.promise_id,
+            "customer_id": d.customer_id,
+            "customer_name": d.customer_name,
+            "remaining_paise": d.remaining_paise,
+            "remaining_rupees": d.remaining_paise / 100.0,
+            "due_date": d.due_date.isoformat(),
+            "status": d.status,
+        }
+        for d in dues
+    ]
+
+
+@router.get("/reports/overdue")
+async def get_overdue(
+    session: AsyncSession = Depends(get_session),
+    enc_service: EncryptionService = Depends(get_encryption_service),
+) -> list[dict[str, Any]]:
+    """Overdue promises with remaining unpaid amounts (§6 Phase 6)."""
+    qs = QueryService(session, encryption_service=enc_service)
+    overdues = await qs.get_overdue_promises(DEFAULT_SHOP_ID)
+    return [
+        {
+            "promise_id": d.promise_id,
+            "customer_id": d.customer_id,
+            "customer_name": d.customer_name,
+            "remaining_paise": d.remaining_paise,
+            "remaining_rupees": d.remaining_paise / 100.0,
+            "due_date": d.due_date.isoformat(),
+            "status": d.status,
+        }
+        for d in overdues
+    ]
 
 
 @router.get("/export")
