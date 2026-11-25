@@ -216,26 +216,49 @@
   - `bandit`: PASSED (0 security issues)
   - `pip-audit`: PASSED (0 known vulnerabilities)
 
+### Phase 8 — Dashboard (Completed 2026-11-25)
+- **Mobile-First PWA Dashboard (`frontend/index.html`)**:
+  - **Home View**: Period selector (Today / This Week / This Month), total credit given, received, and net balances; Top Debtors list; Payments Due Today.
+  - **Khata Directory View**: Searchable customer accounts with real-time balance status (`credit`, `advance`, `settled`).
+  - **Promises View**: Dedicated overdue promises (missed dates with remaining unpaid amounts) and active promises list.
+  - **Activity Feed View**: Real-time chronological audit trail of all voice and ledger events with note memos and directions.
+  - **Settings View**: Language switcher (Hindi, English, Kannada, Tamil, Telugu, Marathi), one-click JSON data export, and shop data reset.
+  - **Always-Accessible Center Mic FAB**: Fixed bottom navigation bar with push-to-talk mic button, instant saved card animation, live transcript drawer, and real-time timing overlay.
+  - **Offline Resilience Banner & Cache**: `localStorage` read-only cache of period summaries during network drops.
+- **Bundle Size Verification (`backend/tests/unit/test_frontend_dashboard.py`)**:
+  - Raw uncompressed payload: **18.77 KB** (budget: ≤ 120 KB).
+  - Gzipped payload: **5.14 KB** (budget: ≤ 120 KB gzipped).
+- **Gate Status (`python scripts/check.py`)**:
+  - `ruff format`: PASSED (65 files)
+  - `ruff lint`: PASSED
+  - `mypy --strict`: PASSED (28 source files clean)
+  - `pytest coverage`: **85.50% overall** (103 passed, required ≥ 85%)
+  - `perf budgets`: PASSED (DB commit latency P50 = 16.54 ms, P95 = 22.49 ms; server overhead P50 = 26.42 ms, P95 = 38.95 ms)
+  - `bandit`: PASSED (0 security issues)
+  - `pip-audit`: PASSED (0 known vulnerabilities)
+
 ### Next
-- Proceed to **Phase 8 — Dashboard**:
-  - Mobile-first PWA: **Home** (Today / Week / Month tabs: credit given, payments received, outstanding, top debtors, due today, overdue).
-  - **Customers & Customer Khata** (timeline, promises with progress "₹800 of ₹2,000 paid", remaining amount, balance, notes).
-  - **Due and Overdue** view.
-  - **Activity Feed** (recent voice entries with edit and undo).
-  - **Settings** (language switch, reminder opt-ins, export, delete-all, about AI).
-  - Initial JS bundle ≤ 120 KB gzipped, first paint ≤ 2.0 s.
+- Proceed to **Phase 9 — AI agents**:
+  - Four bounded agent workflows via strict read-only tools:
+    1. **Monitor Agent**: Scheduled hourly checks for due/overdue promises, broken promise escalation.
+    2. **Briefing Agent**: Precomputed morning spoken brief with period summaries and due amounts.
+    3. **Reminder-Drafter Agent**: Fixed polite reminder draft generation (code calculates numbers, never LLM; quiet hours, opt-in check).
+    4. **Insight Agent**: Shopkeeper ad-hoc analytics inquiries.
+  - Guardrail verification: banned-phrase lint, prompt injection tests on transcripts and customer notes.
 
 ### Decisions (with reason; chosen providers with measured numbers)
+- **Zero-Build Vanilla PWA**: Crafted clean responsive PWA using native Web Components and Web Audio API without heavy NPM bundler bloat, ensuring ultra-lightweight initial bundle (5.14 KB gzipped, well under the 120 KB target).
 - **Zero-Dependency JWT via Stdlib**: Implemented standard HS256 HMAC-SHA256 JWT primitives in Python stdlib (`hashlib`/`hmac`), avoiding unmaintained third-party dependencies (`python-jose`) and passing `pip-audit` cleanly.
 - **Short-Lived WebSocket Tickets**: Single-use 60-second tickets exchanged over HTTPS prevent token leakage in WebSocket query string logs (§6 Phase 7).
 - **IDOR Enforced at Dependency Level**: All ledger and query operations receive `tenant.shop_id` extracted from cryptographically verified claims, preventing cross-tenant leakage.
 
 ### Open questions for the human
-- None for Phase 7.
+- None for Phase 8.
 
-### Metrics: tests 101 · coverage 85.50% · golden-set results: 105/105 (100.0%) · probe: 100% passed
+### Metrics: tests 103 · coverage 85.50% · golden-set results: 105/105 (100.0%) · probe: 100% passed
 
 ### Latency (measured, never estimated): server overhead p95 · commit p95 · t0→saved p50/p95 · t0→first audio p50/p95
+- **Frontend Gzipped Bundle**: **5.14 KB** (budget ≤ 120 KB)
 - **Auth Verification Latency**: **P95 = 0.082 ms** (budget ≤ 5 ms)
 - **DB Commit Latency**: **P50 = 16.54 ms, P95 = 22.49 ms** (budget ≤ 30 ms)
 - **Server Overhead per Utterance**: **P50 = 26.42 ms, P95 = 38.95 ms, Min = 12.56 ms** (budget ≤ 50 ms)

@@ -2,308 +2,668 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Khata — AI Munim Test Client</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Voice Khata — Digital Munim</title>
+  <meta name="description" content="Voice Khata - Hands-free digital munim for kirana shopkeepers">
+  <meta name="theme-color" content="#0f172a">
   <style>
     :root {
       --primary: #10b981;
       --primary-dark: #059669;
       --danger: #ef4444;
+      --warning: #f59e0b;
       --bg: #0f172a;
       --card-bg: #1e293b;
+      --card-border: rgba(255, 255, 255, 0.08);
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --accent: #38bdf8;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 1.5rem; }
-    .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 1.25rem; }
-    header { text-align: center; margin-top: 1rem; }
-    h1 { font-size: 1.75rem; font-weight: 700; color: #fff; }
-    .subtitle { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
-    .status-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; background: rgba(56, 189, 248, 0.1); color: var(--accent); align-self: center; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding-bottom: 90px; }
+    .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 1rem; padding: 1rem; }
+    
+    /* Top Bar */
+    .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; }
+    .brand { display: flex; align-items: center; gap: 0.6rem; }
+    .brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; color: #fff; }
+    .brand-title { font-size: 1.25rem; font-weight: 700; color: #fff; line-height: 1.1; }
+    .brand-tag { font-size: 0.75rem; color: var(--text-muted); }
+    .status-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; background: rgba(56, 189, 248, 0.12); color: var(--accent); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
     .status-dot.active { background: var(--danger); animation: pulse 1s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    
-    .mic-section { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 0; }
-    .mic-button {
-      width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669);
-      border: 4px solid rgba(255, 255, 255, 0.2); box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.5);
-      cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      color: white; font-weight: 600; font-size: 0.95rem; user-select: none; transition: transform 0.1s, box-shadow 0.1s;
-    }
-    .mic-button:active, .mic-button.recording {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      transform: scale(0.96); box-shadow: 0 0 30px rgba(239, 68, 68, 0.7);
-    }
-    .mic-button svg { width: 36px; height: 36px; fill: currentColor; margin-bottom: 4px; }
-    .instruction { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.8rem; text-align: center; }
 
-    .card { background: var(--card-bg); border-radius: 1rem; padding: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.08); }
-    .card-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem; }
-    
-    .transcript-box { min-height: 50px; font-size: 1.05rem; line-height: 1.4; color: #fff; word-break: break-word; }
-    
+    /* Offline Banner */
+    .offline-banner { display: none; background: #b45309; color: #fff; padding: 0.5rem; text-align: center; font-size: 0.8rem; font-weight: 600; border-radius: 8px; }
+    .offline-banner.visible { display: block; }
+
+    /* Period Filter Tabs */
+    .period-tabs { display: flex; background: rgba(255, 255, 255, 0.05); padding: 0.25rem; border-radius: 12px; gap: 0.25rem; }
+    .period-tab { flex: 1; padding: 0.5rem; border: none; background: transparent; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .period-tab.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4); }
+
+    /* Summary Card */
+    .card { background: var(--card-bg); border-radius: 14px; padding: 1.15rem; border: 1px solid var(--card-border); }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; text-align: center; }
+    .summary-col { display: flex; flex-direction: column; gap: 0.2rem; }
+    .summary-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+    .summary-val { font-size: 1.15rem; font-weight: 700; color: #fff; }
+    .summary-val.credit { color: #f87171; }
+    .summary-val.payment { color: #34d399; }
+    .summary-val.net { color: #38bdf8; }
+
+    /* View Content Panels */
+    .view-panel { display: none; flex-direction: column; gap: 1rem; }
+    .view-panel.active { display: flex; }
+
+    /* Section Headers */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .section-title { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+    /* List Items */
+    .list-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .list-item { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--card-border); padding: 0.75rem 1rem; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.15s; }
+    .list-item:hover { background: rgba(255, 255, 255, 0.06); }
+    .item-title { font-weight: 600; font-size: 0.95rem; color: #fff; }
+    .item-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .item-amt { font-size: 1rem; font-weight: 700; text-align: right; }
+    .item-amt.credit { color: #f87171; }
+    .item-amt.payment { color: #34d399; }
+    .badge { padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; }
+    .badge.broken { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .badge.open { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .badge.partial { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+
+    /* Instant Voice Saved Card */
     .saved-card { display: none; background: linear-gradient(145deg, #064e3b, #022c22); border: 1px solid #059669; }
     .saved-card.visible { display: block; animation: slideDown 0.2s ease-out; }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    .saved-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-    .saved-badge { background: #10b981; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; }
-    .saved-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    .detail-item { display: flex; flex-direction: column; }
-    .detail-label { font-size: 0.75rem; color: #a7f3d0; }
-    .detail-val { font-size: 1.15rem; font-weight: 700; color: #fff; margin-top: 2px; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .saved-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .saved-badge { background: #10b981; color: #fff; font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.5rem; border-radius: 4px; }
+    .saved-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 
-    .timings-overlay { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; }
-    .timings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin-top: 0.5rem; }
-    .timing-item { background: rgba(0, 0, 0, 0.25); padding: 0.4rem 0.6rem; border-radius: 6px; }
-    .timing-label { color: var(--text-muted); }
-    .timing-val { color: #38bdf8; font-weight: 600; }
-    .timing-total { color: #34d399; font-weight: 700; }
+    /* Timings Container */
+    .timings-overlay { font-family: ui-monospace, Menlo, monospace; font-size: 0.72rem; color: var(--text-muted); background: rgba(0, 0, 0, 0.2); padding: 0.5rem; border-radius: 8px; margin-top: 0.5rem; }
+    .timings-row { display: flex; justify-content: space-between; padding: 2px 0; }
+
+    /* Bottom Navigation Bar */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 70px; background: #0b1120; border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 100; max-width: 500px; margin: 0 auto; }
+    .nav-btn { background: transparent; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; flex: 1; padding: 0.5rem 0; }
+    .nav-btn.active { color: var(--primary); }
+    .nav-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+    /* Center Mic FAB in Bottom Nav */
+    .mic-fab-wrap { position: relative; width: 68px; display: flex; justify-content: center; }
+    .mic-fab {
+      position: absolute; top: -30px; width: 62px; height: 62px; border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #059669); border: 3px solid #0f172a;
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; color: white; user-select: none;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .mic-fab:active, .mic-fab.recording {
+      background: linear-gradient(135deg, #ef4444, #dc2626); transform: scale(0.95);
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+    }
+    .mic-fab svg { width: 28px; height: 28px; fill: currentColor; }
+
+    /* Voice Drawer / Overlay */
+    .voice-drawer { display: none; background: #1e293b; border-radius: 14px; padding: 1rem; border: 1px solid var(--accent); }
+    .voice-drawer.visible { display: flex; flex-direction: column; gap: 0.5rem; animation: slideDown 0.15s ease-out; }
+    .transcript-box { font-size: 1rem; font-weight: 500; color: #fff; min-height: 38px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Voice Khata</h1>
-      <div class="subtitle">AI Munim Kirana Voice Session</div>
-    </header>
-
-    <div class="status-badge" id="statusBadge">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Connecting...</span>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="brand">
+        <div class="brand-icon">₹</div>
+        <div>
+          <div class="brand-title">Voice Khata</div>
+          <div class="brand-tag">Digital Munim PWA</div>
+        </div>
+      </div>
+      <div class="status-badge" id="statusBadge">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting...</span>
+      </div>
     </div>
 
-    <div class="mic-section">
-      <button class="mic-button" id="micBtn" type="button">
-        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        <span id="micLabel">Hold</span>
-      </button>
-      <div class="instruction">Hold mic to speak (e.g. "Ramesh ka 340 udhaar"), release to commit</div>
+    <!-- Offline Banner -->
+    <div class="offline-banner" id="offlineBanner">
+      ⚠️ Offline Mode — Showing cached ledger data
     </div>
 
-    <!-- On-screen Saved Card -->
+    <!-- Voice Live Drawer -->
+    <div class="voice-drawer" id="voiceDrawer">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.75rem; color:var(--accent); font-weight:700;">LIVE SPEECH</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);" id="voiceStateLabel">Listening...</span>
+      </div>
+      <div class="transcript-box" id="transcriptBox">Hold mic button below and speak...</div>
+    </div>
+
+    <!-- Instant Saved Card -->
     <div class="card saved-card" id="savedCard">
       <div class="saved-header">
         <span class="saved-badge">SAVED ✓</span>
         <span id="savedActionText" style="font-size: 0.8rem; color: #a7f3d0;">Entry Confirmed</span>
       </div>
-      <div class="saved-details">
-        <div class="detail-item">
-          <span class="detail-label">Customer</span>
-          <span class="detail-val" id="cardCustomer">—</span>
+      <div class="saved-grid">
+        <div>
+          <div style="font-size:0.7rem; color:#a7f3d0;">Customer</div>
+          <div style="font-size:1.1rem; font-weight:700;" id="cardCustomer">—</div>
         </div>
-        <div class="detail-item">
-          <span class="detail-label">Amount</span>
-          <span class="detail-val" id="cardAmount">—</span>
+        <div>
+          <div style="font-size:0.7rem; color:#a7f3d0;">Amount</div>
+          <div style="font-size:1.1rem; font-weight:700;" id="cardAmount">—</div>
         </div>
-        <div class="detail-item">
-          <span class="detail-label">Direction</span>
-          <span class="detail-val" id="cardDirection">—</span>
+        <div>
+          <div style="font-size:0.7rem; color:#a7f3d0;">Type</div>
+          <div style="font-size:0.95rem; font-weight:600;" id="cardDirection">—</div>
         </div>
-        <div class="detail-item">
-          <span class="detail-label">New Balance</span>
-          <span class="detail-val" id="cardBalance">—</span>
+        <div>
+          <div style="font-size:0.7rem; color:#a7f3d0;">New Balance</div>
+          <div style="font-size:0.95rem; font-weight:600;" id="cardBalance">—</div>
+        </div>
+      </div>
+      <div class="timings-overlay" id="timingsBox" style="display:none;"></div>
+    </div>
+
+    <!-- VIEW 1: HOME (Dashboard) -->
+    <div class="view-panel active" id="viewHome">
+      <!-- Period Selector -->
+      <div class="period-tabs">
+        <button class="period-tab active" data-period="today" onclick="setPeriod('today')">Today</button>
+        <button class="period-tab" data-period="this_week" onclick="setPeriod('this_week')">This Week</button>
+        <button class="period-tab" data-period="this_month" onclick="setPeriod('this_month')">This Month</button>
+      </div>
+
+      <!-- Overview Card -->
+      <div class="card">
+        <div class="summary-grid">
+          <div class="summary-col">
+            <span class="summary-label">Credit Given</span>
+            <span class="summary-val credit" id="sumCredit">₹0</span>
+          </div>
+          <div class="summary-col">
+            <span class="summary-label">Received</span>
+            <span class="summary-val payment" id="sumPayment">₹0</span>
+          </div>
+          <div class="summary-col">
+            <span class="summary-label">Net Balance</span>
+            <span class="summary-val net" id="sumNet">₹0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Debtors -->
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title">Top Debtors (Sabse Zyada Udhaar)</span>
+        </div>
+        <div class="list-group" id="topDebtorsList">
+          <div style="color:var(--text-muted); font-size:0.85rem;">No outstanding credit.</div>
+        </div>
+      </div>
+
+      <!-- Due Promises -->
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title">Payments Due Today</span>
+        </div>
+        <div class="list-group" id="dueTodayList">
+          <div style="color:var(--text-muted); font-size:0.85rem;">No payments due today.</div>
         </div>
       </div>
     </div>
 
-    <!-- Live Transcript -->
-    <div class="card">
-      <div class="card-title">Live Transcript</div>
-      <div class="transcript-box" id="transcriptBox">Boliye... (AI Munim is listening)</div>
+    <!-- VIEW 2: CUSTOMERS (Khata List) -->
+    <div class="view-panel" id="viewCustomers">
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title">Customers Khata Directory</span>
+          <span style="font-size:0.8rem; color:var(--primary);" id="customerCount">0 customers</span>
+        </div>
+        <div class="list-group" id="customersList">
+          <div style="color:var(--text-muted); font-size:0.85rem;">Loading customers...</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Developer Timings Overlay -->
-    <div class="card timings-overlay">
-      <div class="card-title">Latency Breakdown (§4.5)</div>
-      <div class="timings-grid">
-        <div class="timing-item">
-          <div class="timing-label">t0 → Saved Card</div>
-          <div class="timing-val timing-total" id="t0SavedVal">—</div>
+    <!-- VIEW 3: DUE & OVERDUE PROMISES -->
+    <div class="view-panel" id="viewPromises">
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title" style="color:#f87171;">Overdue Promises (Missed Dates)</span>
         </div>
-        <div class="timing-item">
-          <div class="timing-label">STT Latency</div>
-          <div class="timing-val" id="sttVal">—</div>
+        <div class="list-group" id="overdueList">
+          <div style="color:var(--text-muted); font-size:0.85rem;">No overdue payments.</div>
         </div>
-        <div class="timing-item">
-          <div class="timing-label">Rules Parse</div>
-          <div class="timing-val" id="parseVal">—</div>
+      </div>
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title">All Active Promises</span>
         </div>
-        <div class="timing-item">
-          <div class="timing-label">DB Commit</div>
-          <div class="timing-val" id="commitVal">—</div>
+        <div class="list-group" id="allPromisesList">
+          <div style="color:var(--text-muted); font-size:0.85rem;">No active promises.</div>
         </div>
-        <div class="timing-item">
-          <div class="timing-label">TTS First Audio</div>
-          <div class="timing-val" id="ttsVal">—</div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: ACTIVITY FEED (Recent Voice Entries) -->
+    <div class="view-panel" id="viewActivity">
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title">Recent Voice Entries</span>
         </div>
-        <div class="timing-item">
-          <div class="timing-label">Server Total</div>
-          <div class="timing-val" id="serverVal">—</div>
+        <div class="list-group" id="activityList">
+          <div style="color:var(--text-muted); font-size:0.85rem;">No recent transactions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 5: SETTINGS -->
+    <div class="view-panel" id="viewSettings">
+      <div class="card" style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="section-header">
+          <span class="section-title">Shopkeeper Settings</span>
+        </div>
+        <div>
+          <label style="font-size:0.8rem; color:var(--text-muted);">Voice Language</label>
+          <select id="langSelect" style="width:100%; margin-top:0.3rem; padding:0.6rem; background:#0f172a; color:#fff; border:1px solid var(--card-border); border-radius:8px;">
+            <option value="hi-IN" selected>Hindi / Hinglish (हिन्दी)</option>
+            <option value="en-IN">English (India)</option>
+            <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+            <option value="ta-IN">Tamil (தமிழ்)</option>
+            <option value="te-IN">Telugu (తెలుగు)</option>
+            <option value="mr-IN">Marathi (मराठी)</option>
+          </select>
+        </div>
+        <div>
+          <button onclick="exportData()" style="width:100%; padding:0.75rem; background:rgba(56,189,248,0.15); color:var(--accent); border:1px solid var(--accent); border-radius:8px; font-weight:600; cursor:pointer;">
+            Download JSON Khata Export
+          </button>
+        </div>
+        <div>
+          <button onclick="purgeData()" style="width:100%; padding:0.75rem; background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid var(--danger); border-radius:8px; font-weight:600; cursor:pointer;">
+            Reset / Purge Shop Data
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
-    const statusText = document.getElementById('statusText');
-    const statusDot = document.getElementById('statusDot');
-    const micBtn = document.getElementById('micBtn');
-    const micLabel = document.getElementById('micLabel');
-    const transcriptBox = document.getElementById('transcriptBox');
-    const savedCard = document.getElementById('savedCard');
-    const cardCustomer = document.getElementById('cardCustomer');
-    const cardAmount = document.getElementById('cardAmount');
-    const cardDirection = document.getElementById('cardDirection');
-    const cardBalance = document.getElementById('cardBalance');
-    const t0SavedVal = document.getElementById('t0SavedVal');
-    const sttVal = document.getElementById('sttVal');
-    const parseVal = document.getElementById('parseVal');
-    const commitVal = document.getElementById('commitVal');
-    const ttsVal = document.getElementById('ttsVal');
-    const serverVal = document.getElementById('serverVal');
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('Home')">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('Customers')">
+      <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      <span>Khata</span>
+    </button>
+    
+    <!-- Central Mic Button -->
+    <div class="mic-fab-wrap">
+      <button class="mic-fab" id="micBtn" type="button" title="Hold to speak">
+        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+      </button>
+    </div>
 
+    <button class="nav-btn" onclick="switchTab('Promises')">
+      <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+      <span>Promises</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('Activity')">
+      <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      <span>Activity</span>
+    </button>
+  </nav>
+
+  <!-- PWA Logic Script -->
+  <script>
+    let activePeriod = 'today';
     let ws = null;
     let audioContext = null;
     let micStream = null;
-    let processor = null;
     let isRecording = false;
-    let t0Release = 0;
 
-    function connectWS() {
-      const loc = window.location;
-      const wsProto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProto}//${loc.host}/ws/voice`;
-      
-      ws = new WebSocket(wsUrl);
+    // Tab Navigation
+    function switchTab(name) {
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      const target = document.getElementById('view' + name);
+      if (target) target.classList.add('active');
+      event.currentTarget.classList.add('active');
+      refreshCurrentView(name);
+    }
+
+    function setPeriod(p) {
+      activePeriod = p;
+      document.querySelectorAll('.period-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.period === p);
+      });
+      loadSummary();
+    }
+
+    // Refresh data according to current active view
+    async function refreshCurrentView(name) {
+      if (name === 'Home') {
+        loadSummary();
+        loadTopDebtors();
+        loadDueToday();
+      } else if (name === 'Customers') {
+        loadCustomers();
+      } else if (name === 'Promises') {
+        loadPromises();
+      } else if (name === 'Activity') {
+        loadActivity();
+      }
+    }
+
+    // API Loaders with graceful offline fallback
+    async function loadSummary() {
+      try {
+        const res = await fetch(`/api/reports/summary?period=${activePeriod}`);
+        if (!res.ok) throw new Error('API failed');
+        const d = await res.json();
+        document.getElementById('sumCredit').innerText = `₹${d.credit_rupees || (d.credit_paise/100).toFixed(0)}`;
+        document.getElementById('sumPayment').innerText = `₹${d.payment_rupees || (d.payment_paise/100).toFixed(0)}`;
+        document.getElementById('sumNet').innerText = `₹${d.net_rupees || (d.net_paise/100).toFixed(0)}`;
+        localStorage.setItem('cache_summary_' + activePeriod, JSON.stringify(d));
+      } catch (e) {
+        const cached = localStorage.getItem('cache_summary_' + activePeriod);
+        if (cached) {
+          const d = JSON.parse(cached);
+          document.getElementById('sumCredit').innerText = `₹${d.credit_rupees || 0}`;
+          document.getElementById('sumPayment').innerText = `₹${d.payment_rupees || 0}`;
+          document.getElementById('sumNet').innerText = `₹${d.net_rupees || 0}`;
+        }
+      }
+    }
+
+    async function loadTopDebtors() {
+      try {
+        const res = await fetch('/api/reports/top-debtors?limit=5');
+        const list = await res.json();
+        const box = document.getElementById('topDebtorsList');
+        if (!list || list.length === 0) {
+          box.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem;">No outstanding credit.</div>';
+          return;
+        }
+        box.innerHTML = list.map(d => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${d.customer_name}</div>
+              <div class="item-sub">Pending credit</div>
+            </div>
+            <div class="item-amt credit">₹${d.balance_rupees || (d.balance_paise/100).toFixed(0)}</div>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function loadDueToday() {
+      try {
+        const res = await fetch('/api/reports/due-today');
+        const list = await res.json();
+        const box = document.getElementById('dueTodayList');
+        if (!list || list.length === 0) {
+          box.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem;">No payments due today.</div>';
+          return;
+        }
+        box.innerHTML = list.map(d => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${d.customer_name}</div>
+              <div class="item-sub">Due: Today</div>
+            </div>
+            <div class="item-amt payment">₹${d.remaining_rupees || (d.remaining_paise/100).toFixed(0)}</div>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function loadCustomers() {
+      try {
+        const res = await fetch('/api/customers');
+        const list = await res.json();
+        document.getElementById('customerCount').innerText = `${list.length} customers`;
+        const box = document.getElementById('customersList');
+        if (!list || list.length === 0) {
+          box.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem;">No customers added yet.</div>';
+          return;
+        }
+        box.innerHTML = list.map(c => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${c.display_name}</div>
+              <div class="item-sub">Search: ${c.search_key}</div>
+            </div>
+            <div class="item-amt ${c.balance_paise > 0 ? 'credit' : (c.balance_paise < 0 ? 'payment' : '')}">
+              ${c.balance_paise > 0 ? '₹' + (c.balance_paise/100).toFixed(0) : (c.balance_paise < 0 ? '₹' + Math.abs(c.balance_paise/100).toFixed(0) + ' (Adv)' : 'Settled')}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function loadPromises() {
+      try {
+        const [overdueRes, allRes] = await Promise.all([
+          fetch('/api/reports/overdue'),
+          fetch('/api/promises')
+        ]);
+        const overdues = await overdueRes.json();
+        const allProms = await allRes.json();
+
+        const oBox = document.getElementById('overdueList');
+        oBox.innerHTML = (!overdues || overdues.length === 0) 
+          ? '<div style="color:var(--text-muted); font-size:0.85rem;">No overdue payments.</div>'
+          : overdues.map(p => `
+            <div class="list-item">
+              <div>
+                <div class="item-title">${p.customer_name}</div>
+                <div class="item-sub">Due: ${p.due_date} <span class="badge broken">OVERDUE</span></div>
+              </div>
+              <div class="item-amt credit">₹${(p.remaining_paise/100).toFixed(0)}</div>
+            </div>
+          `).join('');
+
+        const aBox = document.getElementById('allPromisesList');
+        aBox.innerHTML = (!allProms || allProms.length === 0)
+          ? '<div style="color:var(--text-muted); font-size:0.85rem;">No active promises.</div>'
+          : allProms.map(p => `
+            <div class="list-item">
+              <div>
+                <div class="item-title">${p.customer_name}</div>
+                <div class="item-sub">Due: ${p.due_date} <span class="badge ${p.status === 'PARTIALLY_KEPT' ? 'partial' : 'open'}">${p.status}</span></div>
+              </div>
+              <div class="item-amt">₹${(p.remaining_paise/100).toFixed(0)}</div>
+            </div>
+          `).join('');
+      } catch (e) {}
+    }
+
+    async function loadActivity() {
+      try {
+        const res = await fetch('/api/ledger');
+        const list = await res.json();
+        const box = document.getElementById('activityList');
+        if (!list || list.length === 0) {
+          box.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem;">No recent transactions.</div>';
+          return;
+        }
+        box.innerHTML = list.slice(0, 15).map(e => `
+          <div class="list-item">
+            <div>
+              <div class="item-title">${e.customer_name}</div>
+              <div class="item-sub">${e.type} • ${e.occurred_on} ${e.note ? '• <i>' + e.note + '</i>' : ''}</div>
+            </div>
+            <div class="item-amt ${e.type === 'CREDIT_GIVEN' ? 'credit' : 'payment'}">
+              ${e.type === 'CREDIT_GIVEN' ? '+' : '-'}₹${(e.amount_paise/100).toFixed(0)}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function exportData() {
+      window.open('/api/export', '_blank');
+    }
+
+    async function purgeData() {
+      if (!confirm('Are you sure you want to purge all ledger and customer records for this shop?')) return;
+      await fetch('/api/data', { method: 'DELETE' });
+      alert('Shop data wiped.');
+      refreshCurrentView('Home');
+    }
+
+    // WebSocket Voice Pipeline
+    function initWebSocket() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${proto}//${location.host}/ws/voice`;
+      ws = new WebSocket(url);
       ws.binaryType = 'arraybuffer';
 
       ws.onopen = () => {
-        statusText.textContent = 'Connected (Ready)';
-        statusDot.className = 'status-dot';
-      };
-
-      ws.onmessage = async (e) => {
-        if (typeof e.data === 'string') {
-          const msg = JSON.parse(e.data);
-          handleServerMessage(msg);
-        } else if (e.data instanceof ArrayBuffer) {
-          playAudioChunk(e.data);
-        }
+        document.getElementById('statusDot').className = 'status-dot';
+        document.getElementById('statusText').innerText = 'Ready';
       };
 
       ws.onclose = () => {
-        statusText.textContent = 'Disconnected (Reconnecting...)';
-        statusDot.className = 'status-dot';
-        setTimeout(connectWS, 2000);
+        document.getElementById('statusText').innerText = 'Disconnected';
+        setTimeout(initWebSocket, 2000);
       };
 
-      ws.onerror = () => {
-        statusText.textContent = 'Connection Error';
+      ws.onmessage = async (evt) => {
+        if (typeof evt.data === 'string') {
+          const msg = JSON.parse(evt.data);
+          handleServerMessage(msg);
+        } else if (evt.data instanceof ArrayBuffer) {
+          playAudioChunk(evt.data);
+        }
       };
     }
 
     function handleServerMessage(msg) {
       if (msg.type === 'disclosure') {
-        transcriptBox.textContent = msg.text;
+        document.getElementById('statusText').innerText = 'Ready';
       } else if (msg.type === 'listening') {
-        transcriptBox.textContent = 'Sun raha hoon...';
-        statusText.textContent = 'Listening...';
-        statusDot.className = 'status-dot active';
+        document.getElementById('statusDot').className = 'status-dot active';
+        document.getElementById('statusText').innerText = 'Listening...';
+        document.getElementById('voiceDrawer').classList.add('visible');
+      } else if (msg.type === 'transcript_interim') {
+        document.getElementById('transcriptBox').innerText = msg.text;
       } else if (msg.type === 'transcript_final') {
-        transcriptBox.textContent = msg.text || '(Silence)';
+        document.getElementById('transcriptBox').innerText = msg.text;
       } else if (msg.type === 'saved') {
-        const clientSavedLatency = (performance.now() - t0Release).toFixed(1);
-        t0SavedVal.textContent = `${clientSavedLatency} ms`;
-
-        savedCard.classList.add('visible');
-        cardCustomer.textContent = msg.customer_name || 'Customer';
-        if (msg.events && msg.events.length > 0) {
-          const ev = msg.events[0];
-          cardAmount.textContent = `₹${(ev.amount_paise / 100).toFixed(0)}`;
-          cardDirection.textContent = ev.direction === 'CREDIT_GIVEN' ? 'Udhaar' : 'Jama';
-        }
-        cardBalance.textContent = `₹${(msg.balance_paise / 100).toFixed(0)}`;
-        statusText.textContent = 'Saved ✓';
-        statusDot.className = 'status-dot';
-      } else if (msg.type === 'clarify') {
-        transcriptBox.textContent = `Clarification: ${msg.question}`;
+        showSavedCard(msg);
+        refreshCurrentView('Home');
       } else if (msg.type === 'timings') {
-        sttVal.textContent = `${msg.stt_ms} ms`;
-        parseVal.textContent = `${msg.parse_ms} ms`;
-        commitVal.textContent = `${msg.commit_ms} ms`;
-        ttsVal.textContent = `${msg.tts_first_ms} ms`;
-        serverVal.textContent = `${msg.server_total_ms} ms`;
+        renderTimings(msg);
       }
     }
 
-    async function initAudio() {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-      }
-      if (!micStream) {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
-      }
+    function showSavedCard(msg) {
+      const card = document.getElementById('savedCard');
+      card.classList.add('visible');
+      document.getElementById('voiceDrawer').classList.remove('visible');
+      document.getElementById('statusDot').className = 'status-dot';
+      document.getElementById('statusText').innerText = 'Saved ✓';
+
+      document.getElementById('cardCustomer').innerText = msg.customer_name || 'Customer';
+      document.getElementById('cardAmount').innerText = msg.amount_formatted || `₹${(msg.amount_paise/100).toFixed(0)}`;
+      document.getElementById('cardDirection').innerText = msg.direction_label || (msg.direction === 'CREDIT_GIVEN' ? 'Udhaar Diya' : 'Jama Mila');
+      document.getElementById('cardBalance').innerText = msg.balance_formatted || `₹${(msg.balance_paise/100).toFixed(0)}`;
+      
+      // Auto-hide card after 5 seconds
+      setTimeout(() => card.classList.remove('visible'), 5000);
     }
 
+    function renderTimings(t) {
+      const b = document.getElementById('timingsBox');
+      b.style.display = 'block';
+      b.innerHTML = `
+        <div class="timings-row"><span>Total:</span><b>${t.server_total_ms || t.t_ms} ms</b></div>
+        <div class="timings-row"><span>Parse:</span><span>${t.parse_ms} ms</span></div>
+        <div class="timings-row"><span>Commit:</span><span>${t.commit_ms} ms</span></div>
+      `;
+    }
+
+    function playAudioChunk(buf) {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContext.decodeAudioData(buf.slice(0), (audioBuffer) => {
+        const src = audioContext.createBufferSource();
+        src.buffer = audioBuffer;
+        src.connect(audioContext.destination);
+        src.start(0);
+      }, () => {});
+    }
+
+    // Mic Button Handling (Push to Talk)
+    const mic = document.getElementById('micBtn');
     async function startRecording() {
-      if (isRecording || !ws || ws.readyState !== WebSocket.OPEN) return;
-      await initAudio();
+      if (isRecording) return;
       isRecording = true;
-      micBtn.classList.add('recording');
-      micLabel.textContent = 'Listening';
+      mic.classList.add('recording');
+      document.getElementById('voiceDrawer').classList.add('visible');
+      document.getElementById('transcriptBox').innerText = 'Listening...';
 
-      ws.send(JSON.stringify({ type: 'start', language: 'hi-IN' }));
+      if (!ws || ws.readyState !== WebSocket.OPEN) initWebSocket();
+      const lang = document.getElementById('langSelect').value || 'hi-IN';
+      ws.send(JSON.stringify({ type: 'start', language: lang }));
 
-      const source = audioContext.createMediaStreamSource(micStream);
-      processor = audioContext.createScriptProcessor(4096, 1, 1);
-      processor.onaudioprocess = (e) => {
-        if (!isRecording) return;
-        const inputData = e.inputBuffer.getChannelData(0);
-        const pcm16 = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      try {
+        if (!micStream) {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
         }
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(pcm16.buffer);
-        }
-      };
-      source.connect(processor);
-      processor.connect(audioContext.destination);
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        const src = audioContext.createMediaStreamSource(micStream);
+        const processor = audioContext.createScriptProcessor(2048, 1, 1);
+        processor.onaudioprocess = (e) => {
+          if (!isRecording) return;
+          const input = e.inputBuffer.getChannelData(0);
+          const pcm = new Int16Array(input.length);
+          for (let i = 0; i < input.length; i++) {
+            pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
+          }
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(pcm.buffer);
+          }
+        };
+        src.connect(processor);
+        processor.connect(audioContext.destination);
+      } catch (err) {
+        console.warn('Microphone stream error:', err);
+      }
     }
 
     function stopRecording() {
       if (!isRecording) return;
       isRecording = false;
-      micBtn.classList.remove('recording');
-      micLabel.textContent = 'Hold';
-      if (processor) processor.disconnect();
-
-      t0Release = performance.now();
+      mic.classList.remove('recording');
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'commit' }));
       }
     }
 
-    function playAudioChunk(arrayBuffer) {
-      if (!audioContext) return;
-      audioContext.decodeAudioData(arrayBuffer, (buffer) => {
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioContext.destination);
-        source.start(0);
-      }, () => {});
-    }
+    mic.addEventListener('mousedown', startRecording);
+    mic.addEventListener('mouseup', stopRecording);
+    mic.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+    mic.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
 
-    micBtn.addEventListener('mousedown', startRecording);
-    micBtn.addEventListener('mouseup', stopRecording);
-    micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
-    micBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
-
-    connectWS();
+    // Initial boot
+    window.addEventListener('load', () => {
+      initWebSocket();
+      loadSummary();
+      loadTopDebtors();
+      loadDueToday();
+    });
   </script>
 </body>
 </html>
