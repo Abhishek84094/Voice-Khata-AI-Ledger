@@ -1,0 +1,80 @@
+{
+ "n_total": 59,
+ "intent_accuracy": 100.0,
+ "intent_accuracy_by_intent": {
+  "record": {
+   "n": 40,
+   "acc": 100.0
+  },
+  "correct": {
+   "n": 6,
+   "acc": 100.0
+  },
+  "undo": {
+   "n": 4,
+   "acc": 100.0
+  },
+  "query": {
+   "n": 5,
+   "acc": 100.0
+  },
+  "other": {
+   "n": 4,
+   "acc": 100.0
+  }
+ },
+ "record_single_all": {
+  "n": 33,
+  "amount": 100.0,
+  "direction": 100.0,
+  "customer": 100.0,
+  "date": 100.0,
+  "exact": 100.0
+ },
+ "record_by_group": {
+  "hinglish": {
+   "n": 20,
+   "amount": 100.0,
+   "direction": 100.0,
+   "customer": 100.0,
+   "date": 100.0,
+   "exact": 100.0
+  },
+  "english": {
+   "n": 6,
+   "amount": 100.0,
+   "direction": 100.0,
+   "customer": 100.0,
+   "date": 100.0,
+   "exact": 100.0
+  },
+  "devanagari": {
+   "n": 7,
+   "amount": 100.0,
+   "direction": 100.0,
+   "customer": 100.0,
+   "date": 100.0,
+   "exact": 100.0
+  }
+ },
+ "ambiguous_clarification_rate": {
+  "n": 4,
+  "acc": 100.0
+ },
+ "multi_event_exact": {
+  "n": 3,
+  "acc": 100.0
+ },
+ "guardrail": {
+  "recall": 100.0,
+  "n_pos": 4,
+  "false_positive_rate": 0.0,
+  "n_neg": 55
+ },
+ "failures": [],
+ "nlu_latency_ms": {
+  "n": 11800,
+  "p50": 0.292,
+  "p95": 0.955
+ }
+}
