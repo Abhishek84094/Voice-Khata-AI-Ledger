@@ -33,6 +33,17 @@ class ParseResult:
     out_of_scope: bool = False
 
 
+@dataclass
+class ParseUtteranceResult:
+    action: str  # "record", "undo", "correct", "query", "clarification_needed", "out_of_scope"
+    intent: Intent
+    events: list[ParsedEvent] = field(default_factory=list)
+    customer_name: str | None = None
+    question: str | None = None
+    options: list[str] = field(default_factory=list)
+    out_of_scope: bool = False
+
+
 CREDIT_KEYWORDS = [
     "udhaar",
     "udhar",
@@ -267,7 +278,7 @@ def parse(text: str) -> ParseResult:
     if re.search(r"(?:^|\s)(?:ko|को)\s+.*(?:diya|diye|दिए|दिया)", lowered):
         return ParseResult(
             intent=Intent.RECORD,
-            clarification_needed="Direction is ambiguous: was money given or received?",
+            clarification_needed="Direction is ambiguous: was this udhaar or payment (jama)?",
         )
 
     # Missing direction words check in single-clause utterances:
@@ -305,4 +316,73 @@ def parse(text: str) -> ParseResult:
     return ParseResult(
         intent=Intent.RECORD,
         clarification_needed="Could not determine customer or amount with certainty.",
+    )
+
+
+def parse_utterance(
+    text: str,
+    session_context: dict[str, str | None] | None = None,
+) -> ParseUtteranceResult:
+    """Session-aware wrapper around pure parse() mapping to pipeline actions (§4.3 item 4)."""
+    p = parse(text)
+
+    if p.out_of_scope:
+        return ParseUtteranceResult(
+            action="out_of_scope",
+            intent=Intent.OTHER,
+            out_of_scope=True,
+            question="Voice Khata keval udhaar aur hisaab ke liye hai.",
+        )
+
+    if p.intent == Intent.UNDO:
+        return ParseUtteranceResult(
+            action="undo",
+            intent=Intent.UNDO,
+        )
+
+    if p.intent == Intent.CORRECT:
+        num_res = extract_number(text)
+        amt = num_res[0] if num_res is not None else None
+        evs: list[ParsedEvent] = []
+        if amt is not None:
+            ctx_cust = (session_context or {}).get("current_customer_name") or ""
+            evs = [
+                ParsedEvent(customer_name=ctx_cust, amount_paise=amt, direction=Direction.AMENDED)
+            ]
+        return ParseUtteranceResult(
+            action="correct",
+            intent=Intent.CORRECT,
+            events=evs,
+        )
+
+    if p.intent == Intent.QUERY:
+        cust = _extract_customer_from_clause(text)
+        return ParseUtteranceResult(
+            action="query",
+            intent=Intent.QUERY,
+            customer_name=cust,
+        )
+
+    if p.clarification_needed:
+        opts = ["Udhaar", "Jama"] if "direction" in p.clarification_needed.lower() else []
+        return ParseUtteranceResult(
+            action="clarification_needed",
+            intent=p.intent,
+            question=p.clarification_needed,
+            options=opts,
+        )
+
+    if p.intent == Intent.RECORD and p.events:
+        c_name = p.events[0].customer_name
+        return ParseUtteranceResult(
+            action="record",
+            intent=Intent.RECORD,
+            events=p.events,
+            customer_name=c_name,
+        )
+
+    return ParseUtteranceResult(
+        action="clarification_needed",
+        intent=Intent.RECORD,
+        question="Kripya dobara bolein.",
     )

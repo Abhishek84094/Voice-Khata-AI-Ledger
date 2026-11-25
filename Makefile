@@ -9,6 +9,7 @@ help:
 	@echo "  make test      - Run unit and integration tests with coverage"
 	@echo "  make lint      - Run ruff lint and format check"
 	@echo "  make format    - Autoformat code with ruff"
+	@echo "  make perf      - Run performance and latency benchmarks (server overhead <= 50ms)"
 	@echo "  make run-db    - Start Postgres in docker"
 
 check:
@@ -16,6 +17,9 @@ check:
 
 test:
 	$(PYTHON) -m pytest -q --cov=app --cov-fail-under=85 backend/tests
+
+perf:
+	$(PYTHON) -m pytest -s backend/tests/perf
 
 lint:
 	$(PYTHON) -m ruff format --check .

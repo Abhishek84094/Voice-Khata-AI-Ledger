@@ -8,7 +8,7 @@ import asyncpg
 import pytest
 from app.core.config import get_settings
 from app.domain.enums import Direction
-from app.storage.db import get_engine, get_session_factory, init_tables
+from app.storage.db import init_tables
 from app.storage.encryption import EncryptionService
 from app.storage.ledger_service import LedgerService
 from app.storage.models import Shop
@@ -210,49 +210,53 @@ async def test_commit_latency_benchmark(
     enc_service: EncryptionService,
 ) -> None:
     # §4.2 target: DB commit of an entry <= 30 ms p95 with warm pooled connection (§4.3.2)
-    engine = get_engine()
-    factory = get_session_factory(engine)
+    db_url = get_settings().database_url
+    bench_engine = create_async_engine(db_url, pool_size=5, max_overflow=10)
+    factory = async_sessionmaker(bench_engine, expire_on_commit=False, class_=AsyncSession)
     shop_id = str(uuid.uuid4())
 
-    async with factory() as session:
-        shop = Shop(id=shop_id, name="Perf Kirana", language="hi-IN")
-        session.add(shop)
-        await session.commit()
-
-        service = LedgerService(session, encryption_service=enc_service)
-
-        # Warmup
-        for w in range(5):
-            await service.record_event(
-                shop_id=shop_id,
-                customer_name="WarmupCustomer",
-                amount_paise=10000,
-                direction=Direction.CREDIT_GIVEN,
-                occurred_on=date.today(),
-                idempotency_key=f"warmup_{w}",
-            )
+    try:
+        async with factory() as session:
+            shop = Shop(id=shop_id, name="Perf Kirana", language="hi-IN")
+            session.add(shop)
             await session.commit()
 
-        latencies: list[float] = []
-        for i in range(50):
-            t0 = time.perf_counter()
-            await service.record_event(
-                shop_id=shop_id,
-                customer_name=f"Customer_{i % 5}",
-                amount_paise=10000 + i * 100,
-                direction=Direction.CREDIT_GIVEN,
-                occurred_on=date.today(),
-                idempotency_key=f"bench_key_{i}",
-            )
-            await session.commit()
-            dt_ms = (time.perf_counter() - t0) * 1000.0
-            latencies.append(dt_ms)
+            service = LedgerService(session, encryption_service=enc_service)
 
-        latencies.sort()
-        p50 = latencies[len(latencies) // 2]
-        p95 = latencies[int(len(latencies) * 0.95)]
-        print(
-            f"\n[DB COMMIT BENCHMARK] P50: {p50:.2f}ms, P95: {p95:.2f}ms, "
-            f"Min: {min(latencies):.2f}ms"
-        )
-        assert p95 <= 30.0
+            # Warmup
+            for w in range(5):
+                await service.record_event(
+                    shop_id=shop_id,
+                    customer_name="WarmupCustomer",
+                    amount_paise=10000,
+                    direction=Direction.CREDIT_GIVEN,
+                    occurred_on=date.today(),
+                    idempotency_key=f"warmup_{w}",
+                )
+                await session.commit()
+
+            latencies: list[float] = []
+            for i in range(50):
+                t0 = time.perf_counter()
+                await service.record_event(
+                    shop_id=shop_id,
+                    customer_name=f"Customer_{i % 5}",
+                    amount_paise=10000 + i * 100,
+                    direction=Direction.CREDIT_GIVEN,
+                    occurred_on=date.today(),
+                    idempotency_key=f"bench_key_{i}",
+                )
+                await session.commit()
+                dt_ms = (time.perf_counter() - t0) * 1000.0
+                latencies.append(dt_ms)
+
+            latencies.sort()
+            p50 = latencies[len(latencies) // 2]
+            p95 = latencies[int(len(latencies) * 0.95)]
+            print(
+                f"\n[DB COMMIT BENCHMARK] P50: {p50:.2f}ms, P95: {p95:.2f}ms, "
+                f"Min: {min(latencies):.2f}ms"
+            )
+            assert p95 <= 30.0
+    finally:
+        await bench_engine.dispose()

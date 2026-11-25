@@ -18,7 +18,7 @@ from typing import Any
 from app.domain.enums import Direction
 from app.storage.customer_cache import get_customer_cache, normalize_to_search_key
 from app.storage.encryption import EncryptionService, get_encryption_service
-from app.storage.models import Customer, CustomerBalance, LedgerEvent, Promise
+from app.storage.models import Customer, CustomerBalance, LedgerEvent, Promise, Shop
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -236,6 +236,159 @@ class LedgerService:
         res = await self.session.execute(stmt)
         bal = res.scalars().first()
         return bal.balance_paise if bal else 0
+
+    async def get_shop_customers(self, shop_id: str) -> list[Customer]:
+        """Fetch all customers for a given shop."""
+        stmt = (
+            select(Customer).where(Customer.shop_id == shop_id).order_by(Customer.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        return list(res.scalars().all())
+
+    async def ensure_shop_exists(self, shop_id: str, name: str = "Voice Khata Shop") -> Shop:
+        """Ensure a shop record exists, auto-provisioning if missing."""
+        stmt = select(Shop).where(Shop.id == shop_id)
+        res = await self.session.execute(stmt)
+        shop = res.scalars().first()
+        if shop is None:
+            shop = Shop(id=shop_id, name=name, language="hi-IN")
+            self.session.add(shop)
+            await self.session.commit()
+        return shop
+
+    async def void_event(
+        self,
+        shop_id: str,
+        target_event_id: str,
+        idempotency_key: str | None = None,
+    ) -> RecordEventResult:
+        """Void an existing ledger event (§5.7: 'undo' or 'last entry hata do')."""
+        target_stmt = select(LedgerEvent).where(
+            LedgerEvent.shop_id == shop_id,
+            LedgerEvent.id == target_event_id,
+        )
+        target_res = await self.session.execute(target_stmt)
+        target = target_res.scalars().first()
+        if target is None:
+            raise ValueError(f"Event {target_event_id} not found")
+
+        old_amount = self.enc.decrypt_int(target.amount_paise_enc)
+        customer_id = target.customer_id
+        idem_key = idempotency_key or f"void_{target_event_id}_{uuid.uuid4()}"
+
+        # Insert voiding event
+        void_event = LedgerEvent(
+            id=str(uuid.uuid4()),
+            shop_id=shop_id,
+            customer_id=customer_id,
+            type=Direction.VOIDED.value,
+            amount_paise_enc=target.amount_paise_enc,
+            occurred_on=date.today(),
+            recorded_at=datetime.now(timezone.utc),
+            idempotency_key=idem_key,
+            target_event_id=target_event_id,
+        )
+        self.session.add(void_event)
+
+        # Reverse balance impact in customer_balances
+        bal_stmt = (
+            select(CustomerBalance)
+            .where(
+                CustomerBalance.shop_id == shop_id,
+                CustomerBalance.customer_id == customer_id,
+            )
+            .with_for_update()
+        )
+        bal_res = await self.session.execute(bal_stmt)
+        bal_rec = bal_res.scalars().first()
+        if bal_rec:
+            if target.type in (Direction.CREDIT_GIVEN.value, Direction.AMENDED.value):
+                bal_rec.balance_paise -= old_amount
+            elif target.type == Direction.PAYMENT_RECEIVED.value:
+                bal_rec.balance_paise += old_amount
+            bal_rec.last_event_id = void_event.id
+            bal_rec.updated_at = datetime.now(timezone.utc)
+            new_bal = bal_rec.balance_paise
+        else:
+            new_bal = 0
+
+        await self.session.flush()
+        return RecordEventResult(
+            event_id=void_event.id,
+            customer_id=customer_id,
+            customer_name="",
+            amount_paise=old_amount,
+            direction=Direction.VOIDED,
+            new_balance_paise=new_bal,
+            is_duplicate=False,
+        )
+
+    async def amend_event(
+        self,
+        shop_id: str,
+        target_event_id: str,
+        new_amount_paise: int,
+        idempotency_key: str | None = None,
+    ) -> RecordEventResult:
+        """Amend an existing ledger event (§5.7: 'nahi, 430')."""
+        target_stmt = select(LedgerEvent).where(
+            LedgerEvent.shop_id == shop_id,
+            LedgerEvent.id == target_event_id,
+        )
+        target_res = await self.session.execute(target_stmt)
+        target = target_res.scalars().first()
+        if target is None:
+            raise ValueError(f"Event {target_event_id} not found")
+
+        old_amount = self.enc.decrypt_int(target.amount_paise_enc)
+        customer_id = target.customer_id
+        diff = new_amount_paise - old_amount
+        idem_key = idempotency_key or f"amend_{target_event_id}_{uuid.uuid4()}"
+
+        amend_event = LedgerEvent(
+            id=str(uuid.uuid4()),
+            shop_id=shop_id,
+            customer_id=customer_id,
+            type=Direction.AMENDED.value,
+            amount_paise_enc=self.enc.encrypt_int(new_amount_paise),
+            occurred_on=date.today(),
+            recorded_at=datetime.now(timezone.utc),
+            idempotency_key=idem_key,
+            target_event_id=target_event_id,
+        )
+        self.session.add(amend_event)
+
+        bal_stmt = (
+            select(CustomerBalance)
+            .where(
+                CustomerBalance.shop_id == shop_id,
+                CustomerBalance.customer_id == customer_id,
+            )
+            .with_for_update()
+        )
+        bal_res = await self.session.execute(bal_stmt)
+        bal_rec = bal_res.scalars().first()
+        if bal_rec:
+            if target.type == Direction.CREDIT_GIVEN.value:
+                bal_rec.balance_paise += diff
+            elif target.type == Direction.PAYMENT_RECEIVED.value:
+                bal_rec.balance_paise -= diff
+            bal_rec.last_event_id = amend_event.id
+            bal_rec.updated_at = datetime.now(timezone.utc)
+            new_bal = bal_rec.balance_paise
+        else:
+            new_bal = new_amount_paise
+
+        await self.session.flush()
+        return RecordEventResult(
+            event_id=amend_event.id,
+            customer_id=customer_id,
+            customer_name="",
+            amount_paise=new_amount_paise,
+            direction=Direction.AMENDED,
+            new_balance_paise=new_bal,
+            is_duplicate=False,
+        )
 
     async def export_all_data(self, shop_id: str) -> dict[str, Any]:
         """Export all data for a shop in decrypted plaintext JSON (§1 rule 8)."""

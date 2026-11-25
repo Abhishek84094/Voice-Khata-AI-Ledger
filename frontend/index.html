@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Khata — AI Munim Test Client</title>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --danger: #ef4444;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 1.5rem; }
+    .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 1.25rem; }
+    header { text-align: center; margin-top: 1rem; }
+    h1 { font-size: 1.75rem; font-weight: 700; color: #fff; }
+    .subtitle { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+    .status-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; background: rgba(56, 189, 248, 0.1); color: var(--accent); align-self: center; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+    .status-dot.active { background: var(--danger); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    
+    .mic-section { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 0; }
+    .mic-button {
+      width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669);
+      border: 4px solid rgba(255, 255, 255, 0.2); box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.5);
+      cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: white; font-weight: 600; font-size: 0.95rem; user-select: none; transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .mic-button:active, .mic-button.recording {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      transform: scale(0.96); box-shadow: 0 0 30px rgba(239, 68, 68, 0.7);
+    }
+    .mic-button svg { width: 36px; height: 36px; fill: currentColor; margin-bottom: 4px; }
+    .instruction { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.8rem; text-align: center; }
+
+    .card { background: var(--card-bg); border-radius: 1rem; padding: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.08); }
+    .card-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.5rem; }
+    
+    .transcript-box { min-height: 50px; font-size: 1.05rem; line-height: 1.4; color: #fff; word-break: break-word; }
+    
+    .saved-card { display: none; background: linear-gradient(145deg, #064e3b, #022c22); border: 1px solid #059669; }
+    .saved-card.visible { display: block; animation: slideDown 0.2s ease-out; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .saved-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .saved-badge { background: #10b981; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; }
+    .saved-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .detail-item { display: flex; flex-direction: column; }
+    .detail-label { font-size: 0.75rem; color: #a7f3d0; }
+    .detail-val { font-size: 1.15rem; font-weight: 700; color: #fff; margin-top: 2px; }
+
+    .timings-overlay { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; }
+    .timings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin-top: 0.5rem; }
+    .timing-item { background: rgba(0, 0, 0, 0.25); padding: 0.4rem 0.6rem; border-radius: 6px; }
+    .timing-label { color: var(--text-muted); }
+    .timing-val { color: #38bdf8; font-weight: 600; }
+    .timing-total { color: #34d399; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Voice Khata</h1>
+      <div class="subtitle">AI Munim Kirana Voice Session</div>
+    </header>
+
+    <div class="status-badge" id="statusBadge">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Connecting...</span>
+    </div>
+
+    <div class="mic-section">
+      <button class="mic-button" id="micBtn" type="button">
+        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        <span id="micLabel">Hold</span>
+      </button>
+      <div class="instruction">Hold mic to speak (e.g. "Ramesh ka 340 udhaar"), release to commit</div>
+    </div>
+
+    <!-- On-screen Saved Card -->
+    <div class="card saved-card" id="savedCard">
+      <div class="saved-header">
+        <span class="saved-badge">SAVED ✓</span>
+        <span id="savedActionText" style="font-size: 0.8rem; color: #a7f3d0;">Entry Confirmed</span>
+      </div>
+      <div class="saved-details">
+        <div class="detail-item">
+          <span class="detail-label">Customer</span>
+          <span class="detail-val" id="cardCustomer">—</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Amount</span>
+          <span class="detail-val" id="cardAmount">—</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Direction</span>
+          <span class="detail-val" id="cardDirection">—</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">New Balance</span>
+          <span class="detail-val" id="cardBalance">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Transcript -->
+    <div class="card">
+      <div class="card-title">Live Transcript</div>
+      <div class="transcript-box" id="transcriptBox">Boliye... (AI Munim is listening)</div>
+    </div>
+
+    <!-- Developer Timings Overlay -->
+    <div class="card timings-overlay">
+      <div class="card-title">Latency Breakdown (§4.5)</div>
+      <div class="timings-grid">
+        <div class="timing-item">
+          <div class="timing-label">t0 → Saved Card</div>
+          <div class="timing-val timing-total" id="t0SavedVal">—</div>
+        </div>
+        <div class="timing-item">
+          <div class="timing-label">STT Latency</div>
+          <div class="timing-val" id="sttVal">—</div>
+        </div>
+        <div class="timing-item">
+          <div class="timing-label">Rules Parse</div>
+          <div class="timing-val" id="parseVal">—</div>
+        </div>
+        <div class="timing-item">
+          <div class="timing-label">DB Commit</div>
+          <div class="timing-val" id="commitVal">—</div>
+        </div>
+        <div class="timing-item">
+          <div class="timing-label">TTS First Audio</div>
+          <div class="timing-val" id="ttsVal">—</div>
+        </div>
+        <div class="timing-item">
+          <div class="timing-label">Server Total</div>
+          <div class="timing-val" id="serverVal">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const micBtn = document.getElementById('micBtn');
+    const micLabel = document.getElementById('micLabel');
+    const transcriptBox = document.getElementById('transcriptBox');
+    const savedCard = document.getElementById('savedCard');
+    const cardCustomer = document.getElementById('cardCustomer');
+    const cardAmount = document.getElementById('cardAmount');
+    const cardDirection = document.getElementById('cardDirection');
+    const cardBalance = document.getElementById('cardBalance');
+    const t0SavedVal = document.getElementById('t0SavedVal');
+    const sttVal = document.getElementById('sttVal');
+    const parseVal = document.getElementById('parseVal');
+    const commitVal = document.getElementById('commitVal');
+    const ttsVal = document.getElementById('ttsVal');
+    const serverVal = document.getElementById('serverVal');
+
+    let ws = null;
+    let audioContext = null;
+    let micStream = null;
+    let processor = null;
+    let isRecording = false;
+    let t0Release = 0;
+
+    function connectWS() {
+      const loc = window.location;
+      const wsProto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProto}//${loc.host}/ws/voice`;
+      
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        statusText.textContent = 'Connected (Ready)';
+        statusDot.className = 'status-dot';
+      };
+
+      ws.onmessage = async (e) => {
+        if (typeof e.data === 'string') {
+          const msg = JSON.parse(e.data);
+          handleServerMessage(msg);
+        } else if (e.data instanceof ArrayBuffer) {
+          playAudioChunk(e.data);
+        }
+      };
+
+      ws.onclose = () => {
+        statusText.textContent = 'Disconnected (Reconnecting...)';
+        statusDot.className = 'status-dot';
+        setTimeout(connectWS, 2000);
+      };
+
+      ws.onerror = () => {
+        statusText.textContent = 'Connection Error';
+      };
+    }
+
+    function handleServerMessage(msg) {
+      if (msg.type === 'disclosure') {
+        transcriptBox.textContent = msg.text;
+      } else if (msg.type === 'listening') {
+        transcriptBox.textContent = 'Sun raha hoon...';
+        statusText.textContent = 'Listening...';
+        statusDot.className = 'status-dot active';
+      } else if (msg.type === 'transcript_final') {
+        transcriptBox.textContent = msg.text || '(Silence)';
+      } else if (msg.type === 'saved') {
+        const clientSavedLatency = (performance.now() - t0Release).toFixed(1);
+        t0SavedVal.textContent = `${clientSavedLatency} ms`;
+
+        savedCard.classList.add('visible');
+        cardCustomer.textContent = msg.customer_name || 'Customer';
+        if (msg.events && msg.events.length > 0) {
+          const ev = msg.events[0];
+          cardAmount.textContent = `₹${(ev.amount_paise / 100).toFixed(0)}`;
+          cardDirection.textContent = ev.direction === 'CREDIT_GIVEN' ? 'Udhaar' : 'Jama';
+        }
+        cardBalance.textContent = `₹${(msg.balance_paise / 100).toFixed(0)}`;
+        statusText.textContent = 'Saved ✓';
+        statusDot.className = 'status-dot';
+      } else if (msg.type === 'clarify') {
+        transcriptBox.textContent = `Clarification: ${msg.question}`;
+      } else if (msg.type === 'timings') {
+        sttVal.textContent = `${msg.stt_ms} ms`;
+        parseVal.textContent = `${msg.parse_ms} ms`;
+        commitVal.textContent = `${msg.commit_ms} ms`;
+        ttsVal.textContent = `${msg.tts_first_ms} ms`;
+        serverVal.textContent = `${msg.server_total_ms} ms`;
+      }
+    }
+
+    async function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      }
+      if (!micStream) {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
+      }
+    }
+
+    async function startRecording() {
+      if (isRecording || !ws || ws.readyState !== WebSocket.OPEN) return;
+      await initAudio();
+      isRecording = true;
+      micBtn.classList.add('recording');
+      micLabel.textContent = 'Listening';
+
+      ws.send(JSON.stringify({ type: 'start', language: 'hi-IN' }));
+
+      const source = audioContext.createMediaStreamSource(micStream);
+      processor = audioContext.createScriptProcessor(4096, 1, 1);
+      processor.onaudioprocess = (e) => {
+        if (!isRecording) return;
+        const inputData = e.inputBuffer.getChannelData(0);
+        const pcm16 = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(pcm16.buffer);
+        }
+      };
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      micLabel.textContent = 'Hold';
+      if (processor) processor.disconnect();
+
+      t0Release = performance.now();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'commit' }));
+      }
+    }
+
+    function playAudioChunk(arrayBuffer) {
+      if (!audioContext) return;
+      audioContext.decodeAudioData(arrayBuffer, (buffer) => {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+      }, () => {});
+    }
+
+    micBtn.addEventListener('mousedown', startRecording);
+    micBtn.addEventListener('mouseup', stopRecording);
+    micBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+    micBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+
+    connectWS();
+  </script>
+</body>
+</html>

@@ -53,6 +53,15 @@ async def drop_tables(engine: AsyncEngine) -> None:
         await conn.run_sync(Base.metadata.drop_all)
 
 
+async def reset_db_engine() -> None:
+    """Dispose and reset engine and session factory singleton."""
+    global _engine, _session_factory
+    if _engine is not None:
+        await _engine.dispose()
+    _engine = None
+    _session_factory = None
+
+
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency for database sessions."""
     factory = get_session_factory()
