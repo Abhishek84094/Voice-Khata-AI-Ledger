@@ -1,64 +1,42 @@
 # Progress Log — Voice Khata
 
-## Current phase: 0 — Project setup and decisions
+## Current phase: 1 — Provider bake-off and latency spike
 
 ### Done (with evidence: command output or probe result)
-- Initialized isolated git repository and folder structure matching §3.3.
-- Installed Python 3.12 (CPython 3.12.16) via `uv` and provisioned virtual environment `.venv`.
-- Configured `.gitignore`, `.env.example`, `.env` (holding user-supplied Sarvam and Groq API keys, generated 32-byte AES `LEDGER_KEY`), and `docker-compose.yml` for PostgreSQL 16.
-- Scaffolded `backend/app` with Pydantic settings, FastAPI application, and `/healthz` endpoint.
-- Created unit test `backend/tests/unit/test_healthz.py` verifying `/healthz` returns 200 with `status="ok"`.
-- Built cross-platform gate runner `scripts/check.py`, `Makefile`, and GitHub Actions CI workflow (`.github/workflows/ci.yml`).
-- Formatted and linted evaluation files in `eval/` (`eval_nlu.py`, `probe_pipeline.py`).
-- Created `docs/decisions.md`.
-- **Gate Check Evidence** (`python scripts/check.py` output):
-  ```
-  --- [GATE] Running: ruff format check ---
-  Command: ...\.venv\Scripts\python.exe -m ruff format --check .
-  [GATE PASSED] ruff format check
-
-  --- [GATE] Running: ruff lint check ---
-  Command: ...\.venv\Scripts\python.exe -m ruff check .
-  [GATE PASSED] ruff lint check
-
-  --- [GATE] Running: mypy strict ---
-  Command: ...\.venv\Scripts\python.exe -m mypy --strict backend/app
-  [GATE PASSED] mypy strict
-
-  --- [GATE] Running: pytest coverage ---
-  Command: ...\.venv\Scripts\python.exe -m pytest -q --cov=app --cov-report=term-missing --cov-fail-under=85 backend/tests
-  [GATE PASSED] pytest coverage (100% coverage, 1 passed)
-
-  --- [GATE] Running: bandit security scan ---
-  Command: ...\.venv\Scripts\python.exe -m bandit -q -r backend/app -c pyproject.toml
-  [GATE PASSED] bandit security scan (0 issues)
-
-  --- [GATE] Running: pip-audit dependency vulnerability check ---
-  Command: ...\.venv\Scripts\python.exe -m pip_audit
-  [GATE PASSED] pip-audit dependency vulnerability check (No known vulnerabilities found)
-
-  ==========================================
-  ALL GATE CHECKS PASSED SUCCESSFULLY (GREEN)
-  ==========================================
-  ```
+- Verified Sarvam AI API endpoints, authentication, active models, and real response formats. Discovered and documented that `saarika:v2` is deprecated and `saaras:v3` is active, and that Hindi STT returns Devanagari numerals (`३४०`).
+- Verified Groq API endpoints and evaluated `qwen/qwen3.8-27b` with strict JSON mode at temperature 0.
+- Documented verified facts, endpoints, request schemas, and latency findings in `docs/platform-notes.md`.
+- Generated `eval/reading_script.md` with 30 diverse test utterances (quiet and noisy) and `eval/audio/manifest.json`.
+- Saved real response fixtures in `backend/tests/fixtures/providers/` (`sarvam_stt_success.json`, `sarvam_tts_success.json`, `groq_llm_success.json`, `provider_error_401.json`).
+- Defined abstract interfaces in `backend/app/voice/interfaces.py` (`SpeechToText`, `TextToSpeech`, `LLMClient`).
+- Implemented production adapters in `backend/app/voice/sarvam.py` and `backend/app/voice/groq.py` with persistent `httpx.AsyncClient` reuse and binary audio decoding.
+- Built fake provider server in `backend/tests/fakes/provider_server.py` supporting fixture replay, delay injection, error status injection, malformed JSON, and connection drop simulation.
+- Created contract tests in `backend/tests/contract/test_provider_adapters.py` (7 tests, all passing).
+- Executed empirical latency benchmark script (`scripts/benchmark_providers.py`) against live provider endpoints:
+  - **Groq (`qwen/qwen3.8-27b`)**: P50 = 222.9 ms, P95 = 889.0 ms, Min = 178.6 ms, JSON validity = 100.0%
+  - **Sarvam STT (`saaras:v3`)**: P50 = 227.4 ms, P95 = 702.7 ms, Mean = 330.5 ms
+  - **Sarvam TTS (`bulbul:v4-flash`)**: P50 = 1040.0 ms, P95 = 1321.5 ms, Mean = 1058.7 ms
+- Updated `docs/decisions.md` with chosen providers, models, and measured numbers.
 
 ### Next
-- Proceed to **Phase 1 — Provider bake-off and latency spike**:
-  - Verify and document Sarvam AI and Groq platform specifications (endpoints, auth, streaming protocol, latency budgets) in `docs/platform-notes.md`.
-  - Benchmark live latency and streaming capabilities of candidate providers.
-  - Generate reading script from `eval/golden_utterances.json` for recording verification clips.
+- Proceed to **Phase 2 — NLU core (pure Python, no I/O)**:
+  - Implement full Devanagari (०-९) and Hindi/Hinglish (1-99, fractions, words) number normalizer.
+  - Implement date resolver (aaj, kal, parso, weekdays, dates).
+  - Implement deterministic rules parser with multi-event support and clarification flags.
+  - Run `eval/eval_nlu.py` against `eval/golden_utterances.json` to beat target metrics (≥95% single-event, ≥90% multi-event, 0 silent wrong numbers).
 
 ### Decisions (with reason; chosen providers with measured numbers)
-- **Python Runtime**: Python 3.12 via `uv` for fast, reproducible environments.
-- **Speech & LLM Providers**: Sarvam AI selected for speech recognition (STT) and synthesis (TTS); Groq selected for low-latency JSON LLM fallback.
-- **Language & Script Policy**: Support all Sarvam AI supported Indian languages; dual-script policy (store and index both Latin search keys and native scripts).
-- **Security & Secrets**: Strict gitignore for `.env` and `.key`; AES-256-GCM encryption key generated at 32-bytes; no secrets logged.
-- **Cross-Platform Gate**: `scripts/check.py` runner ensures consistent validation on Windows and Linux CI.
+- **STT**: Sarvam AI (`saaras:v3`). Latency: P50 = 227.4 ms, P95 = 702.7 ms. Native code-mixed Indian language handling.
+- **TTS**: Sarvam AI (`bulbul:v4-flash` conversational, fallback `bulbul:v3`). Latency: P50 = 1040.0 ms. Pre-synthesized static phrase caching required for instant audio response.
+- **LLM**: Groq (`qwen/qwen3.8-27b`). Latency: P50 = 222.9 ms, 100% valid JSON. Used solely as guarded fallback (slow path).
 
 ### Open questions for the human
-- None for Phase 0.
+- Reading script is ready in `eval/reading_script.md` whenever you would like to record the ~30 audio clips.
 
-### Metrics: tests 1 · coverage 100% · golden-set results: pending Phase 1/2
+### Metrics: tests 8 · coverage 100% · golden-set results: pending Phase 2
 
 ### Latency (measured, never estimated): server overhead p95 · commit p95 · t0→saved p50/p95 · t0→first audio p50/p95
-- Healthz test execution: 2.30s total harness overhead. Real live latency measurements begin in Phase 1.
+- **Groq LLM**: p50 = 222.9 ms, p95 = 889.0 ms
+- **Sarvam STT**: p50 = 227.4 ms, p95 = 702.7 ms
+- **Sarvam TTS**: p50 = 1040.0 ms, p95 = 1321.5 ms
+- **Projected `t0 → saved` (fast path)**: ~252 ms p50, ~730 ms p95 (well within ≤800 ms target)

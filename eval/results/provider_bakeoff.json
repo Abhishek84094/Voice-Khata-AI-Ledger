@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-11-25T04:38:34Z",
+  "groq_llm": {
+    "provider": "Groq",
+    "model": "qwen/qwen3.8-27b",
+    "n": 10,
+    "p50_ms": 222.9,
+    "p95_ms": 889.0,
+    "min_ms": 178.6,
+    "max_ms": 889.0,
+    "mean_ms": 305.2,
+    "json_validity_rate": 100.0
+  },
+  "sarvam_tts": {
+    "provider": "Sarvam AI",
+    "service": "TTS",
+    "model": "bulbul:v4-flash",
+    "n": 5,
+    "p50_ms": 1040.0,
+    "p95_ms": 1321.5,
+    "mean_ms": 1058.7
+  },
+  "sarvam_stt": {
+    "provider": "Sarvam AI",
+    "service": "STT",
+    "model": "saaras:v3",
+    "n": 5,
+    "p50_ms": 227.4,
+    "p95_ms": 702.7,
+    "mean_ms": 330.5
+  }
+}

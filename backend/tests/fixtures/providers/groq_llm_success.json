@@ -1,0 +1,21 @@
+{
+  "id": "chatcmpl-test-qwen",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "qwen/qwen3.8-27b",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"intent\": \"record\", \"events\": [{\"customer\": \"Ramesh\", \"amount\": 340, \"direction\": \"CREDIT_GIVEN\", \"date_offset\": 0}], \"clarify\": false, \"out_of_scope\": false}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 45,
+    "completion_tokens": 35,
+    "total_tokens": 80
+  }
+}
