@@ -560,9 +560,19 @@
       } else if (msg.type === 'transcript_interim') {
         document.getElementById('transcriptBox').innerText = msg.text;
       } else if (msg.type === 'transcript_final') {
-        document.getElementById('transcriptBox').innerText = msg.text;
+        document.getElementById('transcriptBox').innerText = msg.text || '(Silence or unclear audio)';
+      } else if (msg.type === 'clarify') {
+        document.getElementById('transcriptBox').innerText = msg.question || 'Kripya dobara bolein.';
+        document.getElementById('statusText').innerText = 'Needs Clarification';
+        document.getElementById('statusDot').className = 'status-dot';
       } else if (msg.type === 'saved') {
-        showSavedCard(msg);
+        if (msg.query_answer) {
+          document.getElementById('transcriptBox').innerText = msg.query_answer;
+          document.getElementById('statusText').innerText = 'Answered ✓';
+          document.getElementById('statusDot').className = 'status-dot';
+        } else {
+          showSavedCard(msg);
+        }
         refreshCurrentView('Home');
       } else if (msg.type === 'timings') {
         renderTimings(msg);
@@ -605,14 +615,26 @@
       }, () => {});
     }
 
-    // Mic Button Handling (Push to Talk)
+    // Mic Button Handling (Click to Toggle or Push-to-Talk)
     const mic = document.getElementById('micBtn');
+
+    async function toggleRecording(e) {
+      if (e) e.preventDefault();
+      if (isRecording) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    }
+
     async function startRecording() {
       if (isRecording) return;
       isRecording = true;
       mic.classList.add('recording');
       document.getElementById('voiceDrawer').classList.add('visible');
-      document.getElementById('transcriptBox').innerText = 'Listening...';
+      document.getElementById('statusDot').className = 'status-dot active';
+      document.getElementById('statusText').innerText = 'Listening... (tap mic again to stop)';
+      document.getElementById('transcriptBox').innerText = 'Listening... Speak now.';
 
       if (!ws || ws.readyState !== WebSocket.OPEN) initWebSocket();
       const lang = document.getElementById('langSelect').value || 'hi-IN';
@@ -623,6 +645,9 @@
           micStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
         }
         if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
         const src = audioContext.createMediaStreamSource(micStream);
         const processor = audioContext.createScriptProcessor(2048, 1, 1);
         processor.onaudioprocess = (e) => {
@@ -640,6 +665,7 @@
         processor.connect(audioContext.destination);
       } catch (err) {
         console.warn('Microphone stream error:', err);
+        document.getElementById('transcriptBox').innerText = 'Mic access error: ' + (err.message || 'Permission denied');
       }
     }
 
@@ -647,15 +673,14 @@
       if (!isRecording) return;
       isRecording = false;
       mic.classList.remove('recording');
+      document.getElementById('statusText').innerText = 'Processing...';
+      document.getElementById('transcriptBox').innerText = 'Processing audio...';
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'commit' }));
       }
     }
 
-    mic.addEventListener('mousedown', startRecording);
-    mic.addEventListener('mouseup', stopRecording);
-    mic.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
-    mic.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+    mic.addEventListener('click', toggleRecording);
 
     // Initial boot
     window.addEventListener('load', () => {
