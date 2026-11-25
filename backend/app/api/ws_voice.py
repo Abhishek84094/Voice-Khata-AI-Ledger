@@ -6,6 +6,7 @@ from datetime import date
 from typing import Any
 
 from app.api.ledger_api import DEFAULT_SHOP_ID
+from app.auth.security import consume_ws_ticket, verify_jwt_token
 from app.dialogue.session import SessionState, VoiceSession
 from app.dialogue.templates import (
     render_confirmation_speech,
@@ -72,8 +73,35 @@ async def _run_tts(ws: WebSocket, text: str, language: str = "hi-IN") -> None:
 
 @router.websocket("/ws/voice")
 async def websocket_voice_endpoint(websocket: WebSocket) -> None:
-    """Bi-directional streaming voice WebSocket session (§4.4)."""
+    """Bi-directional streaming voice WebSocket session (§4.4, §6 Phase 7).
+
+    Supports authentication via:
+    1. Query param ?ticket=<single_use_ticket>
+    2. Query param ?token=<jwt_access_token>
+    3. Graceful fallback to DEFAULT_SHOP_ID in unauthenticated dev/test mode.
+    """
     await websocket.accept()
+
+    query_params = websocket.query_params
+    shop_id = DEFAULT_SHOP_ID
+
+    ticket = query_params.get("ticket")
+    token = query_params.get("token")
+
+    if ticket:
+        consumed_shop = consume_ws_ticket(ticket)
+        if not consumed_shop:
+            await websocket.close(code=4001, reason="Invalid or expired ticket")
+            return
+        shop_id = consumed_shop
+    elif token:
+        try:
+            claims = verify_jwt_token(token)
+            if "shop_id" in claims:
+                shop_id = str(claims["shop_id"])
+        except Exception:
+            await websocket.close(code=4001, reason="Invalid access token")
+            return
 
     # Turn 0: AI disclosure turn (§4.4, §6 Phase 4)
     await websocket.send_json(
@@ -84,7 +112,7 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
         }
     )
 
-    session = VoiceSession(shop_id=DEFAULT_SHOP_ID)
+    session = VoiceSession(shop_id=shop_id)
     stt_client_inst = _get_stt_client_instance()
     stt_session = stt_client_inst.session(language=session.language)
     enc_service = EncryptionService()

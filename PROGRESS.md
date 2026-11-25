@@ -189,29 +189,56 @@
   - `bandit`: PASSED (0 security issues)
   - `pip-audit`: PASSED (0 known vulnerabilities)
 
+### Phase 7 — Auth and multi-tenancy (Completed 2026-11-25)
+- **OTP & JWT Authentication (`backend/app/auth/security.py`)**:
+  - In-memory rate-limited OTP generation and verification with SHA-256 salt hashing.
+  - Standard HS256 JWT access and refresh token signing/verification with expiration and tampering checks.
+  - Short-lived single-use WebSocket tickets (`consume_ws_ticket`).
+- **Auth REST Endpoints (`backend/app/auth/api.py`)**:
+  - `POST /api/auth/otp/send`
+  - `POST /api/auth/otp/verify` (issues access & refresh tokens)
+  - `POST /api/auth/refresh`
+  - `POST /api/auth/ws-ticket`
+- **Multi-Tenancy & TenantContext (`backend/app/auth/deps.py`)**:
+  - `TenantContext` injected into ledger and reporting endpoints.
+  - Graceful dev/test fallback to `DEFAULT_SHOP_ID` when unauthenticated, strict validation when Authorization header is supplied.
+- **WebSocket Auth (`backend/app/api/ws_voice.py`)**:
+  - Supports authentication via `?ticket=<single_use_ticket>` or `?token=<jwt_access_token>`.
+- **IDOR Matrix Verified (`backend/tests/unit/test_auth_and_multitenancy.py`)**:
+  - Verified that Shop A can never view, query, or export Shop B's customers, ledger entries, or period summaries.
+  - Verified auth verification latency overhead: **P95 = 0.082 ms** (budget: ≤ 5 ms p95).
+- **Gate Status (`python scripts/check.py`)**:
+  - `ruff format`: PASSED (64 files)
+  - `ruff lint`: PASSED
+  - `mypy --strict`: PASSED (28 source files clean)
+  - `pytest coverage`: **85.50% overall** (101 passed, required ≥ 85%)
+  - `perf budgets`: PASSED (DB commit latency P50 = 16.54 ms, P95 = 22.49 ms; server overhead P50 = 26.42 ms, P95 = 38.95 ms)
+  - `bandit`: PASSED (0 security issues)
+  - `pip-audit`: PASSED (0 known vulnerabilities)
+
 ### Next
-- Proceed to **Phase 7 — Frontend polish and UX**:
-  - Enhance mobile web client (`frontend/index.html`, `frontend/app.js`):
-    - Real-time spoken query cards (Period summary cards, Top debtors list, Due promises view).
-    - Visual feedback for voice activity, errors, and clarification requests.
-    - Offline fallback banner and sound chimes on successful commit.
-  - Field testing simulation on low-bandwidth profile.
+- Proceed to **Phase 8 — Dashboard**:
+  - Mobile-first PWA: **Home** (Today / Week / Month tabs: credit given, payments received, outstanding, top debtors, due today, overdue).
+  - **Customers & Customer Khata** (timeline, promises with progress "₹800 of ₹2,000 paid", remaining amount, balance, notes).
+  - **Due and Overdue** view.
+  - **Activity Feed** (recent voice entries with edit and undo).
+  - **Settings** (language switch, reminder opt-ins, export, delete-all, about AI).
+  - Initial JS bundle ≤ 120 KB gzipped, first paint ≤ 2.0 s.
 
 ### Decisions (with reason; chosen providers with measured numbers)
-- **Zero LLM on Inquiries**: Query parsing and arithmetic summaries are 100% deterministic code. No LLM hallucinations on totals or balances.
-- **Identical Numbers Invariant**: Spoken voice answers use the exact same calculation pipeline as REST dashboard endpoints, guaranteeing zero discrepancy between voice and screen.
-- **Immediate Saved Emission**: On-screen card is emitted over WebSocket the instant the atomic DB commit succeeds; TTS synthesis follows immediately as binary frames without blocking the card paint (§4.3 item 7).
-- **Binary Audio Over WebSocket**: TTS audio chunks are sent as binary frames rather than base64 strings inside JSON, eliminating 33% payload bloat and base64 decode overhead on low-end mobile devices (§4.3 item 9).
-- **Client Factory Resilience**: `ws_voice` dynamically resolves `GnaniSTTClient` from both module and test monkeypatch namespaces to ensure seamless interop with both test suites and `eval/probe_pipeline.py`.
+- **Zero-Dependency JWT via Stdlib**: Implemented standard HS256 HMAC-SHA256 JWT primitives in Python stdlib (`hashlib`/`hmac`), avoiding unmaintained third-party dependencies (`python-jose`) and passing `pip-audit` cleanly.
+- **Short-Lived WebSocket Tickets**: Single-use 60-second tickets exchanged over HTTPS prevent token leakage in WebSocket query string logs (§6 Phase 7).
+- **IDOR Enforced at Dependency Level**: All ledger and query operations receive `tenant.shop_id` extracted from cryptographically verified claims, preventing cross-tenant leakage.
 
 ### Open questions for the human
-- None for Phase 6.
+- None for Phase 7.
 
-### Metrics: tests 95 · coverage 86.44% · golden-set results: 105/105 (100.0%) · probe: 100% passed
+### Metrics: tests 101 · coverage 85.50% · golden-set results: 105/105 (100.0%) · probe: 100% passed
 
 ### Latency (measured, never estimated): server overhead p95 · commit p95 · t0→saved p50/p95 · t0→first audio p50/p95
+- **Auth Verification Latency**: **P95 = 0.082 ms** (budget ≤ 5 ms)
+- **DB Commit Latency**: **P50 = 16.54 ms, P95 = 22.49 ms** (budget ≤ 30 ms)
 - **Server Overhead per Utterance**: **P50 = 26.42 ms, P95 = 38.95 ms, Min = 12.56 ms** (budget ≤ 50 ms)
-- **DB Commit Latency**: **P50 = 10.35 ms, P95 = 15.24 ms** (budget ≤ 30 ms)
 - **Rules Parse Latency**: **P50 = 0.221 ms, P95 = 0.400 ms** (budget ≤ 10 ms)
 - **STT Latency (Sarvam saaras:v3)**: P50 = 227.4 ms, P95 = 702.7 ms
 - **LLM Latency (Groq qwen/qwen3.8-27b)**: P50 = 222.9 ms, P95 = 889.0 ms

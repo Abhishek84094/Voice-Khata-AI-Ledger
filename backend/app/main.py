@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, ORJSONResponse
 from app.api.health import router as health_router
 from app.api.ledger_api import router as ledger_router
 from app.api.ws_voice import router as ws_voice_router
+from app.auth.api import router as auth_router
 from app.core.config import get_settings
 from app.storage.db import get_engine, init_tables, reset_db_engine
 
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(auth_router)
     app.include_router(ledger_router)
     app.include_router(ws_voice_router)
 

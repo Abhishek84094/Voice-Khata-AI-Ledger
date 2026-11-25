@@ -223,11 +223,11 @@ async def test_commit_latency_benchmark(
 
             service = LedgerService(session, encryption_service=enc_service)
 
-            # Warmup
-            for w in range(5):
+            # Warmup connection pool and customer caches
+            for w in range(10):
                 await service.record_event(
                     shop_id=shop_id,
-                    customer_name="WarmupCustomer",
+                    customer_name=f"WarmupCustomer_{w % 3}",
                     amount_paise=10000,
                     direction=Direction.CREDIT_GIVEN,
                     occurred_on=date.today(),

@@ -4,6 +4,8 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_SHOP_ID = "00000000-0000-0000-0000-000000000001"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

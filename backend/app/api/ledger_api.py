@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from app.auth.deps import TenantContext, get_tenant_context
+from app.core import config as app_config
 from app.storage.db import get_db_session as get_session
 from app.storage.encryption import EncryptionService
 from app.storage.ledger_service import LedgerService
@@ -13,8 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api", tags=["ledger"])
 
-# Default shop ID for development and test harnesses
-DEFAULT_SHOP_ID = "00000000-0000-0000-0000-000000000001"
+DEFAULT_SHOP_ID: str = app_config.DEFAULT_SHOP_ID
 
 
 def get_encryption_service() -> EncryptionService:
@@ -23,6 +24,7 @@ def get_encryption_service() -> EncryptionService:
 
 @router.get("/ledger")
 async def get_ledger_events(
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> list[dict[str, Any]]:
@@ -30,7 +32,7 @@ async def get_ledger_events(
     query = (
         select(LedgerEvent, Customer.display_name_enc)
         .join(Customer, LedgerEvent.customer_id == Customer.id)
-        .where(LedgerEvent.shop_id == DEFAULT_SHOP_ID)
+        .where(LedgerEvent.shop_id == tenant.shop_id)
         .order_by(LedgerEvent.recorded_at.desc())
     )
     res = await session.execute(query)
@@ -69,12 +71,13 @@ async def get_ledger_events(
 
 @router.get("/customers")
 async def get_customers(
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> list[dict[str, Any]]:
     """Return all customers with their decrypted names and current cached balances."""
     service = LedgerService(session, encryption_service=enc_service)
-    customers = await service.get_shop_customers(DEFAULT_SHOP_ID)
+    customers = await service.get_shop_customers(tenant.shop_id)
 
     items: list[dict[str, Any]] = []
     for c in customers:
@@ -82,7 +85,7 @@ async def get_customers(
             name = enc_service.decrypt_text(c.display_name_enc)
         except Exception:
             name = "[Customer]"
-        bal = await service.get_cached_balance(DEFAULT_SHOP_ID, c.id)
+        bal = await service.get_cached_balance(tenant.shop_id, c.id)
         items.append(
             {
                 "id": c.id,
@@ -97,17 +100,19 @@ async def get_customers(
 
 @router.get("/promises")
 async def get_promises(
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> list[dict[str, Any]]:
     """Return all promises with derived allocations and statuses (§5.6, §6 Phase 5)."""
     service = LedgerService(session, encryption_service=enc_service)
-    return await service.get_shop_promises(DEFAULT_SHOP_ID)
+    return await service.get_shop_promises(tenant.shop_id)
 
 
 @router.get("/reports/summary")
 async def get_report_summary(
     period: str = Query("today"),
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> dict[str, Any]:
@@ -128,7 +133,7 @@ async def get_report_summary(
         end_d = date(next_y, next_m, 1) - timedelta(days=1)
 
     qs = QueryService(session, encryption_service=enc_service)
-    summary = await qs.get_period_summary(DEFAULT_SHOP_ID, start_d, end_d, period=period)
+    summary = await qs.get_period_summary(tenant.shop_id, start_d, end_d, period=period)
     return {
         "period": period,
         "start_date": start_d.isoformat(),
@@ -145,12 +150,13 @@ async def get_report_summary(
 @router.get("/reports/top-debtors")
 async def get_top_debtors(
     limit: int = Query(5, ge=1, le=50),
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> list[dict[str, Any]]:
     """Top debtors endpoint for dashboard and voice cross-checking (§6 Phase 6)."""
     qs = QueryService(session, encryption_service=enc_service)
-    debtors = await qs.get_top_debtors(DEFAULT_SHOP_ID, limit=limit)
+    debtors = await qs.get_top_debtors(tenant.shop_id, limit=limit)
     return [
         {
             "customer_id": d.customer_id,
@@ -164,12 +170,13 @@ async def get_top_debtors(
 
 @router.get("/reports/due-today")
 async def get_due_today(
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> list[dict[str, Any]]:
     """Promises due today (§6 Phase 6)."""
     qs = QueryService(session, encryption_service=enc_service)
-    dues = await qs.get_due_promises(DEFAULT_SHOP_ID)
+    dues = await qs.get_due_promises(tenant.shop_id)
     return [
         {
             "promise_id": d.promise_id,
@@ -186,12 +193,13 @@ async def get_due_today(
 
 @router.get("/reports/overdue")
 async def get_overdue(
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> list[dict[str, Any]]:
     """Overdue promises with remaining unpaid amounts (§6 Phase 6)."""
     qs = QueryService(session, encryption_service=enc_service)
-    overdues = await qs.get_overdue_promises(DEFAULT_SHOP_ID)
+    overdues = await qs.get_overdue_promises(tenant.shop_id)
     return [
         {
             "promise_id": d.promise_id,
@@ -208,20 +216,22 @@ async def get_overdue(
 
 @router.get("/export")
 async def export_data(
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> dict[str, Any]:
     """Export all decrypted ledger data for the shop (§5.1)."""
     service = LedgerService(session, encryption_service=enc_service)
-    return await service.export_all_data(DEFAULT_SHOP_ID)
+    return await service.export_all_data(tenant.shop_id)
 
 
 @router.delete("/data")
 async def delete_all_data(
+    tenant: TenantContext = Depends(get_tenant_context),
     session: AsyncSession = Depends(get_session),
     enc_service: EncryptionService = Depends(get_encryption_service),
 ) -> dict[str, Any]:
     """Purge all shop records (§5.1)."""
     service = LedgerService(session, encryption_service=enc_service)
-    await service.delete_all_data(DEFAULT_SHOP_ID)
-    return {"status": "purged", "shop_id": DEFAULT_SHOP_ID}
+    await service.delete_all_data(tenant.shop_id)
+    return {"status": "purged", "shop_id": tenant.shop_id}
