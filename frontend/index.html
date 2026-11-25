@@ -607,12 +607,24 @@
 
     function playAudioChunk(buf) {
       if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
       audioContext.decodeAudioData(buf.slice(0), (audioBuffer) => {
         const src = audioContext.createBufferSource();
         src.buffer = audioBuffer;
         src.connect(audioContext.destination);
         src.start(0);
-      }, () => {});
+      }, (err) => {
+        console.warn('Audio decode error, fallback to Web Speech:', err);
+        // Fallback: browser SpeechSynthesis if binary audio decode fails
+        const text = document.getElementById('cardCustomer').innerText;
+        if ('speechSynthesis' in window && text) {
+          const utter = new SpeechSynthesisUtterance(text + ' ka hisaab darj ho gaya');
+          utter.lang = document.getElementById('langSelect').value || 'hi-IN';
+          window.speechSynthesis.speak(utter);
+        }
+      });
     }
 
     // Mic Button Handling (Click to Toggle or Push-to-Talk)

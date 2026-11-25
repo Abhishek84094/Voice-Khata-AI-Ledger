@@ -7,6 +7,7 @@ from typing import Any
 
 from app.api.ledger_api import DEFAULT_SHOP_ID
 from app.auth.security import consume_ws_ticket, verify_jwt_token
+from app.core.config import get_settings
 from app.dialogue.session import SessionState, VoiceSession
 from app.dialogue.templates import (
     render_confirmation_speech,
@@ -26,6 +27,7 @@ from app.storage.encryption import EncryptionService
 from app.storage.ledger_service import LedgerService
 from app.storage.query_service import QueryService
 from app.voice import stt_client
+from app.voice.sarvam import SarvamTTSAdapter
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 GnaniSTTClient = stt_client.GnaniSTTClient
@@ -41,10 +43,16 @@ def _get_stt_client_instance() -> Any:
     return stt_client.SarvamSTTClient()
 
 
-# Fixed pre-synthesized audio cache placeholder (PCM16 silence / beep 200ms)
-_PRECACHED_AUDIO_CHUNKS: dict[str, bytes] = {
-    "default": b"\x00" * 3200,
-}
+# TTS client instance
+_tts_adapter: SarvamTTSAdapter | None = None
+
+
+def _get_tts_adapter() -> SarvamTTSAdapter | None:
+    global _tts_adapter
+    api_key = get_settings().sarvam_api_key
+    if api_key and _tts_adapter is None:
+        _tts_adapter = SarvamTTSAdapter(api_key=api_key)
+    return _tts_adapter
 
 
 async def _run_tts(ws: WebSocket, text: str, language: str = "hi-IN") -> None:
@@ -53,15 +61,23 @@ async def _run_tts(ws: WebSocket, text: str, language: str = "hi-IN") -> None:
     await ws.send_json(
         {
             "type": "audio_start",
-            "format": "pcm16",
+            "format": "wav",
             "sample_rate": 22050,
             "text": text,
         }
     )
 
-    # 2. Stream binary audio chunks
-    audio_chunk = _PRECACHED_AUDIO_CHUNKS.get("default", b"\x00" * 3200)
-    await ws.send_bytes(audio_chunk)
+    # 2. Synthesize audio with Sarvam TTS if configured
+    tts = _get_tts_adapter()
+    audio_chunk: bytes = b""
+    if tts:
+        try:
+            audio_chunk = await tts.synthesize(text, language_code=language)
+        except Exception:
+            pass
+
+    if audio_chunk:
+        await ws.send_bytes(audio_chunk)
 
     # 3. audio_end control message
     await ws.send_json(
