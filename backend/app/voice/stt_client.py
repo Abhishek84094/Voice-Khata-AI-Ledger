@@ -31,6 +31,10 @@ class StreamingSTTSession:
             return ""
 
         pcm_data = b"".join(self.audio_chunks)
+        # Sarvam requires non-empty audio (> 0.25 seconds, i.e., > 8000 bytes for 16kHz 16-bit mono)
+        if len(pcm_data) < 8000:
+            return ""
+
         # Wrap raw PCM16 (16kHz mono) in WAV container for HTTP STT endpoints
         buf = io.BytesIO()
         with wave.open(buf, "wb") as wav_file:
@@ -48,7 +52,10 @@ class StreamingSTTSession:
 
         async with httpx.AsyncClient(timeout=timeout) as client:
             stt = SarvamSTTAdapter(api_key=api_key, client=client)
-            return await stt.transcribe(wav_bytes, language_code=self.language)
+            try:
+                return await stt.transcribe(wav_bytes, language_code=self.language)
+            except Exception:
+                return ""
 
 
 class SarvamSTTClient:

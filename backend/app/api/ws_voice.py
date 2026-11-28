@@ -200,7 +200,21 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                     }
                 )
 
-                # 2. Fast-path deterministic NLU parse
+                # 2. If transcript is empty (silence or audio too short)
+                if not transcript or not transcript.strip():
+                    q = "Awaaz saaf nahi aayi. Kripya mic daba kar dobara bolein."
+                    await websocket.send_json(
+                        {
+                            "type": "clarify",
+                            "question": q,
+                            "t_ms": round((time.perf_counter() - t0) * 1000.0, 2),
+                        }
+                    )
+                    t_tts0 = time.perf_counter()
+                    await _run_tts(websocket, q, session.language)
+                    continue
+
+                # 3. Fast-path deterministic NLU parse
                 t_parse0 = time.perf_counter()
                 session_ctx = {
                     "current_customer_name": session.current_customer_name,
@@ -209,8 +223,31 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                 parse_res = parse_utterance(transcript, session_context=session_ctx)
                 parse_ms = (time.perf_counter() - t_parse0) * 1000.0
 
-                # 3. Route according to parse action
+                # 4. Route according to parse action
                 action = parse_res.action
+
+                # If pure rules flagged 'Missing direction' but there are question/inquiry words,
+                # route directly to the Conversational Munim Agent!
+                inquiry_triggers = [
+                    "kitna",
+                    "kiska",
+                    "kis kis",
+                    "kisko",
+                    "kya",
+                    "promise",
+                    "aaj",
+                    "hisaab",
+                    "total",
+                    "batao",
+                    "dekh",
+                    "due",
+                    "baaki",
+                    "hai",
+                    "?",
+                ]
+                has_inquiry = any(w in transcript.lower() for w in inquiry_triggers)
+                if action == "clarification_needed" and has_inquiry:
+                    action = "munim_agent"
 
                 if action == "clarification_needed":
                     q = parse_res.question or "Kripya dobara bolein."
