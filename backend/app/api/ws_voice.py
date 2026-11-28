@@ -2,7 +2,6 @@
 
 import time
 import uuid
-from datetime import date
 from typing import Any
 
 from app.agents.conversational_munim import ConversationalMunimAgent
@@ -13,20 +12,13 @@ from app.dialogue.session import SessionState, VoiceSession
 from app.dialogue.templates import (
     render_confirmation_speech,
     render_correction_speech,
-    render_customer_balance_speech,
-    render_due_today_speech,
-    render_overdue_speech,
     render_partial_payment_speech,
-    render_period_summary_speech,
-    render_top_debtors_speech,
     render_undo_speech,
 )
-from app.domain.queries import QueryType, parse_query
 from app.nlu.rules_parser import parse_utterance
 from app.storage.db import get_session_factory
 from app.storage.encryption import EncryptionService
 from app.storage.ledger_service import LedgerService
-from app.storage.query_service import QueryService
 from app.voice import stt_client
 from app.voice.sarvam import SarvamTTSAdapter
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -393,116 +385,18 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                         }
                     )
 
-                elif action == "query":
-                    # Check if this is a compound/conversational inquiry
-                    is_compound = any(
-                        kw in transcript.lower()
-                        for kw in [
-                            "kis kis",
-                            "aur koi",
-                            "promise",
-                            "batao",
-                            "kiska kiska",
-                            "sab batao",
-                        ]
-                    )
-
-                    parsed_q = parse_query(transcript)
+                elif action in ("query", "munim_agent"):
+                    # Route all questions & inquiries to the Conversational Munim Agent
                     ans = ""
-                    card_extra: dict[str, Any] = {"query_type": parsed_q.query_type.value}
+                    card_extra: dict[str, Any] = {}
 
                     async with session_factory() as db_sess:
-                        qs = QueryService(db_sess, encryption_service=enc_service)
-                        ledger = LedgerService(db_sess, encryption_service=enc_service)
-
-                        if is_compound:
-                            munim = ConversationalMunimAgent(db_sess, enc_service)
-                            munim_res = await munim.answer_shopkeeper(
-                                session.shop_id, transcript, session.language
-                            )
-                            ans = munim_res["answer"]
-                            card_extra["facts"] = munim_res["facts"]
-                        elif parsed_q.query_type == QueryType.CUSTOMER_BALANCE:
-                            cust_name = (
-                                parsed_q.customer_name
-                                or parse_res.customer_name
-                                or session.current_customer_name
-                            )
-                            if cust_name:
-                                cust_id, _ = await ledger.get_or_create_customer(
-                                    session.shop_id, cust_name
-                                )
-                                bal = await ledger.get_cached_balance(session.shop_id, cust_id)
-                                ans = render_customer_balance_speech(
-                                    cust_name, bal, session.language
-                                )
-                                card_extra["customer_name"] = cust_name
-                                card_extra["balance_paise"] = bal
-                            else:
-                                ans = "Kiska balance dekhna hai?"
-
-                        elif parsed_q.query_type == QueryType.PERIOD_SUMMARY:
-                            today = date.today()
-                            start_d = parsed_q.start_date or today
-                            end_d = parsed_q.end_date or today
-                            summary = await qs.get_period_summary(
-                                session.shop_id, start_d, end_d, period=parsed_q.period
-                            )
-                            ans = render_period_summary_speech(summary, session.language)
-                            card_extra["summary"] = {
-                                "credit_paise": summary.credit_paise,
-                                "payment_paise": summary.payment_paise,
-                                "period": summary.period,
-                            }
-
-                        elif parsed_q.query_type == QueryType.TOP_DEBTORS:
-                            debtors = await qs.get_top_debtors(
-                                session.shop_id, limit=parsed_q.limit
-                            )
-                            ans = render_top_debtors_speech(debtors, session.language)
-                            card_extra["debtors"] = [
-                                {
-                                    "customer_name": d.customer_name,
-                                    "balance_paise": d.balance_paise,
-                                }
-                                for d in debtors
-                            ]
-
-                        elif parsed_q.query_type == QueryType.DUE_TODAY:
-                            dues = await qs.get_due_promises(session.shop_id)
-                            ans = render_due_today_speech(dues, session.language)
-                            card_extra["dues"] = [
-                                {
-                                    "customer_name": d.customer_name,
-                                    "remaining_paise": d.remaining_paise,
-                                }
-                                for d in dues
-                            ]
-
-                        elif parsed_q.query_type == QueryType.OVERDUE:
-                            overdues = await qs.get_overdue_promises(session.shop_id)
-                            ans = render_overdue_speech(overdues, session.language)
-                            card_extra["overdues"] = [
-                                {
-                                    "customer_name": d.customer_name,
-                                    "remaining_paise": d.remaining_paise,
-                                }
-                                for d in overdues
-                            ]
-
-                        elif parsed_q.query_type == QueryType.LAST_ENTRIES:
-                            recent = await qs.get_recent_entries(
-                                session.shop_id, limit=parsed_q.limit
-                            )
-                            ans = f"Aakhiri {len(recent)} entries ka hisaab."
-                            card_extra["recent"] = [
-                                {
-                                    "customer_name": r.customer_name,
-                                    "amount_paise": r.amount_paise,
-                                    "direction": r.direction,
-                                }
-                                for r in recent
-                            ]
+                        munim = ConversationalMunimAgent(db_sess, enc_service)
+                        munim_res = await munim.answer_shopkeeper(
+                            session.shop_id, transcript, session.language
+                        )
+                        ans = munim_res["answer"]
+                        card_extra["facts"] = munim_res["facts"]
 
                     await websocket.send_json(
                         {
