@@ -1,14 +1,15 @@
 """Conversational Munim Agent orchestrator (§6 Phase 9, Phase 10).
 
-Translates natural, compound, conversational shopkeeper queries into multi-turn
-answers by querying real-time database state (via QueryService and LedgerService)
-and synthesizing natural, human-like conversational Hindi/Hinglish speech using Groq LLM.
+Translates natural, compound, conversational shopkeeper queries and instructions
+into multi-turn actions (adding promises, modifying promises, answering ledger questions)
+by querying and updating real-time database state and synthesizing natural conversational
+Hindi/Hinglish speech using Groq LLM.
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from app.core.config import get_settings
@@ -43,10 +44,87 @@ class ConversationalMunimAgent:
         user_utterance: str,
         language: str = "hi-IN",
     ) -> dict[str, Any]:
-        """Fetch accurate database records and produce a natural, human conversational response."""
+        """Process compound instructions (e.g. promises or business questions)."""
         today = date.today()
+        lowered = user_utterance.lower()
 
-        # 1. Gather all real-time ledger context for this shop
+        # Check if the user is asking to add/alter/reschedule a promise:
+        promise_words = [
+            "promise",
+            "dega",
+            "degi",
+            "tariq",
+            "tarikh",
+            "somwar",
+            "mangalwar",
+            "budhwar",
+            "guruwar",
+            "shukrawar",
+            "shanivar",
+            "ravivar",
+            "agle",
+            "aayega",
+        ]
+        action_words = ["add", "likho", "update", "karo", "daalo", "kar do", "rakho", "hai"]
+        is_promise_instruction = any(w in lowered for w in promise_words) and any(
+            w in lowered for w in action_words
+        )
+
+        if is_promise_instruction and self.llm:
+            sys = (
+                "You are an intelligent Munim assistant at a kirana shop. "
+                "The shopkeeper wants to record or update a payment promise.\n"
+                "- customer_name: customer name (e.g. Ramesh, Priya)\n"
+                "- amount_rupees: amount in rupees if stated, or null\n"
+                "- due_day_offset: days from today for promised payment (e.g. 1, 7)\n"
+                "- speech_reply: natural response in Hindi confirming the promise.\n"
+                "Return JSON with keys: customer_name, amount_rupees, due_day_offset, speech_reply"
+            )
+            prompt = (
+                f'Shopkeeper said: "{user_utterance}" (Today is {today.strftime("%A, %Y-%m-%d")})'
+            )
+            try:
+                res = await self.llm.complete_json(prompt=prompt, system_prompt=sys)
+                cust_name = res.get("customer_name")
+                amt_rs = res.get("amount_rupees")
+                offset = res.get("due_day_offset") or 7
+                speech = res.get("speech_reply")
+
+                if cust_name:
+                    cust_id, _ = await self.ledger.get_or_create_customer(shop_id, cust_name)
+                    amt_paise = int(amt_rs * 100) if amt_rs else None
+                    if amt_paise is None:
+                        bal = await self.ledger.get_cached_balance(shop_id, cust_id)
+                        amt_paise = max(0, bal)
+
+                    due_d = today + timedelta(days=int(offset))
+                    await self.ledger.create_promise(
+                        shop_id=shop_id,
+                        customer_id=cust_id,
+                        due_date=due_d,
+                        amount_paise=amt_paise,
+                    )
+                    await self.session.commit()
+
+                    date_str = due_d.strftime("%d %B")
+                    default_speech = (
+                        f"Theek hai, {cust_name} ki ₹{amt_paise // 100} ki "
+                        f"promise {date_str} darj ho gayi."
+                    )
+                    reply_text = speech or default_speech
+                    return {
+                        "answer": reply_text,
+                        "facts": {
+                            "action": "promise_created",
+                            "customer": cust_name,
+                            "due_date": due_d.isoformat(),
+                            "amount_rupees": amt_paise // 100,
+                        },
+                    }
+            except Exception as e:
+                logger.warning(f"Promise instruction LLM extraction failed: {e}")
+
+        # General factual inquiry handling
         summary = await self.qs.get_period_summary(shop_id, today, today, period="today")
         recent_entries = await self.qs.get_recent_entries(shop_id, limit=10)
         due_promises = await self.qs.get_due_promises(shop_id, target_date=today)
@@ -83,7 +161,6 @@ class ConversationalMunimAgent:
             ],
         }
 
-        # 2. If Groq LLM is available, craft a warm, concise, conversational response
         if self.llm:
             system_prompt = (
                 "You are an intelligent, friendly, respectful digital Munim (clerk) at a shop. "
@@ -122,7 +199,7 @@ class ConversationalMunimAgent:
             except Exception as e:
                 logger.warning(f"Groq LLM conversational response failed: {e}")
 
-        # Fallback deterministic natural response if LLM call fails or is unavailable
+        # Fallback deterministic natural response
         parts: list[str] = []
         if today_credit_rs > 0:
             parts.append(f"Aaj kul ₹{today_credit_rs} ka udhaar gaya hai.")

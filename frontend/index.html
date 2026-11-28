@@ -656,19 +656,35 @@
         if (!micStream) {
           micStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
         }
-        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
         if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }
+        const sampleRate = audioContext.sampleRate;
         const src = audioContext.createMediaStreamSource(micStream);
-        const processor = audioContext.createScriptProcessor(2048, 1, 1);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
         processor.onaudioprocess = (e) => {
           if (!isRecording) return;
           const input = e.inputBuffer.getChannelData(0);
-          const pcm = new Int16Array(input.length);
-          for (let i = 0; i < input.length; i++) {
-            pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
+          
+          // Downsample to 16000 Hz if browser AudioContext is running at 44100 or 48000 Hz
+          let pcm;
+          if (sampleRate !== 16000) {
+            const ratio = sampleRate / 16000;
+            const newLength = Math.round(input.length / ratio);
+            pcm = new Int16Array(newLength);
+            for (let i = 0; i < newLength; i++) {
+              const srcIdx = Math.round(i * ratio);
+              const sample = Math.max(-1, Math.min(1, input[srcIdx] || 0));
+              pcm[i] = sample * 0x7fff;
+            }
+          } else {
+            pcm = new Int16Array(input.length);
+            for (let i = 0; i < input.length; i++) {
+              pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
+            }
           }
+
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(pcm.buffer);
           }
