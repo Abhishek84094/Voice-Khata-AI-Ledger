@@ -5,6 +5,7 @@ import uuid
 from datetime import date
 from typing import Any
 
+from app.agents.conversational_munim import ConversationalMunimAgent
 from app.api.ledger_api import DEFAULT_SHOP_ID
 from app.auth.security import consume_ws_ticket, verify_jwt_token
 from app.core.config import get_settings
@@ -356,6 +357,19 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                     )
 
                 elif action == "query":
+                    # Check if this is a compound/conversational inquiry
+                    is_compound = any(
+                        kw in transcript.lower()
+                        for kw in [
+                            "kis kis",
+                            "aur koi",
+                            "promise",
+                            "batao",
+                            "kiska kiska",
+                            "sab batao",
+                        ]
+                    )
+
                     parsed_q = parse_query(transcript)
                     ans = ""
                     card_extra: dict[str, Any] = {"query_type": parsed_q.query_type.value}
@@ -364,7 +378,14 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                         qs = QueryService(db_sess, encryption_service=enc_service)
                         ledger = LedgerService(db_sess, encryption_service=enc_service)
 
-                        if parsed_q.query_type == QueryType.CUSTOMER_BALANCE:
+                        if is_compound:
+                            munim = ConversationalMunimAgent(db_sess, enc_service)
+                            munim_res = await munim.answer_shopkeeper(
+                                session.shop_id, transcript, session.language
+                            )
+                            ans = munim_res["answer"]
+                            card_extra["facts"] = munim_res["facts"]
+                        elif parsed_q.query_type == QueryType.CUSTOMER_BALANCE:
                             cust_name = (
                                 parsed_q.customer_name
                                 or parse_res.customer_name
@@ -633,17 +654,24 @@ async def websocket_voice_endpoint(websocket: WebSocket) -> None:
                     )
 
                 else:
-                    # Unknown / unparsed utterance -> ask shopkeeper to clarify
-                    q = "Kripya dobara bolein."
+                    # Check if utterance can be answered conversationally by the Munim Agent
+                    async with session_factory() as db_sess:
+                        munim = ConversationalMunimAgent(db_sess, enc_service)
+                        munim_res = await munim.answer_shopkeeper(
+                            session.shop_id, transcript, session.language
+                        )
+                        ans = munim_res["answer"]
+
                     await websocket.send_json(
                         {
-                            "type": "clarify",
-                            "question": q,
+                            "type": "saved",
+                            "query_answer": ans,
+                            "facts": munim_res["facts"],
                             "t_ms": round((time.perf_counter() - t0) * 1000.0, 2),
                         }
                     )
                     t_tts0 = time.perf_counter()
-                    await _run_tts(websocket, q, session.language)
+                    await _run_tts(websocket, ans, session.language)
                     tts_first_ms = (time.perf_counter() - t_tts0) * 1000.0
                     server_total_ms = (time.perf_counter() - t0) * 1000.0
                     await websocket.send_json(
